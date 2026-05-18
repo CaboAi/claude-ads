@@ -43,7 +43,13 @@ A manual audit of a single Google Ads account takes 4-6 hours of senior PPC time
 
 Full release notes: [CHANGELOG.md](CHANGELOG.md).
 
-## Sample output
+## Demo
+
+<p align="center">
+  <img src="assets/demo.gif" alt="Claude Ads in action: /ads audit dispatching 6 parallel subagents, returning Ads Health Score with platform breakdown and prioritized action plan" width="100%">
+</p>
+
+### Sample output
 
 What `/ads audit` actually returns (truncated for brevity):
 
@@ -91,7 +97,6 @@ Plus a PDF version (`/ads report`) with health score gauge, platform comparison 
 ## Contents
 
 - [Installation: 3 ways to add Claude Ads](#installation-3-ways-to-add-claude-ads)
-- [Demo](#demo)
 - [Quick Start](#quick-start)
 - [Commands](#commands)
 - [Features: what 250+ audit checks cover](#features-what-250-audit-checks-cover)
@@ -194,12 +199,6 @@ cd claude-ads
 
 <p align="center">
   <img src="assets/diagrams/20-install-methods.svg" alt="Installation Methods Comparison" width="100%">
-</p>
-
-## Demo
-
-<p align="center">
-  <img src="assets/demo.gif" alt="Claude Ads in action: /ads audit dispatching 6 parallel subagents, returning Ads Health Score with platform breakdown and prioritized action plan" width="100%">
 </p>
 
 ## Quick Start
