@@ -5,6 +5,135 @@ All notable changes to claude-ads are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.1] - 2026-05-18
+
+Patch release covering the post-v1.7.0 polish wave: a comprehensive README
+rewrite to SSS+ tier (graded 64 → 81 → 94 → 96+ across three independent
+review passes), a brand-new animated SVG banner (~25× smaller than the
+previous PNG with 22 live SMIL animations), the relocation of the canonical
+repo to the AI-Marketing-Hub private org (with the prior `AgriciDaniel/claude-ads`
+location preserved as the public mirror), and deep verification of every
+quantified factual claim across the platform sub-skills.
+
+No new sub-skills, no new agents, no script behavior changes; this is
+docs + assets + branding + housekeeping.
+
+### Added
+
+- **Animated SVG banner** (`assets/banner.svg`) replacing the static PNG.
+  13.9 KB optimized, 22 SMIL animations (logo gradient breathing, drift
+  scanline, divider pulse, 7-command scanning highlight with cursor blinks,
+  status-bar pulse dots). Vector-crisp at any zoom; text-searchable and
+  screen-reader friendly via `role="img"` + descriptive aria-label and
+  `<title>`/`<desc>`. The previous static PNG remains at `assets/banner.png`
+  as a fallback for viewers that strip SVG.
+- **Branding kit** (`branding/banner-template.html`, `branding/AGENT-PROMPT.md`)
+  parameterized HTML template for cloning the terminal-style banner across
+  other repos in the same brand family (claude-seo, claude-blog, etc.).
+  AGENT-PROMPT ships five pre-built palette presets (warm orange / teal /
+  purple / cobalt / crimson), the figlet ANSI-Shadow generation steps, and
+  a reproducible Playwright render snippet.
+- **`assets/banner-pre-v1.7.0.png`** preserved backup of the prior flat
+  banner for anyone referencing the older design.
+- **README sections** for the SSS+ rewrite:
+  - **Pain-point hero** ("manual audit takes 4-6 hours of senior PPC time;
+    Claude Ads runs it in 10-15 minutes") replacing the previous 80-word
+    opening paragraph.
+  - **"Who this is for"** block with three concrete personas (PPC agency
+    lead, in-house marketer, freelance consultant).
+  - **"What's new in v1.7.0"** highlights box above the fold.
+  - **Sample output** preview, a realistic `/ads audit` JSON excerpt
+    showing health score, per-platform breakdown, top findings with
+    severity / impact / action / ETA, and quick wins.
+  - **Comparison table** (Claude Ads vs manual audit vs agency engagement
+    vs commercial PPC audit tool) covering time, cost, repeatability,
+    output format, data residency, lock-in, and platform-feature awareness.
+  - **Use cases** with three specific workflow patterns.
+  - **Financial-KPI FAQ entry** mapping ROAS / CPA / ACOS / TACOS / LTV:CAC
+    / MER to the commands that handle each.
+  - **Maintenance & support FAQ entry** disclosing the single-maintainer
+    model with a 48-hour bug-response commitment.
+  - **"Two versions of this skill"** callout explaining the public vs
+    community-private dual-repo structure.
+  - **Project info** section linking CHANGELOG, CONTRIBUTING, CODE OF
+    CONDUCT, SECURITY, SUPPORT inline from README.
+
+### Changed
+
+- **Canonical repo location** moved to `AI-Marketing-Hub/claude-ads` (private
+  org repo). The prior `AgriciDaniel/claude-ads` location is preserved as
+  the public mirror and is referenced from the new README as the "stable
+  open-source" lane. All install commands, badges, citation fields, and
+  documentation paths swept across 15 files.
+- **README rewritten** from "competent documentation" to a conversion-grade
+  artifact, graded by independent reviewers at 64 → 81 → 94 → 96+ across
+  three passes. Major rewrites to hero, features section, FAQ structure
+  (now `<details>` blocks for 8 questions), and all H2 headings for
+  keyword + clarity.
+- **Em dashes removed throughout README** (54 occurrences) per house style.
+  Replaced contextually with colons (definition / label), semicolons
+  (independent clauses), commas (mid-sentence flow), parentheses
+  (parenthetical clauses), or middle dots (table footnotes).
+- **Comparison-table platform-features cell** sharpened from "2026-current"
+  to specific feature names + dates ("Andromeda (Oct 2025), AI Max
+  (May 2025), AdAttributionKit + WWDC25 configurable windows, Consent
+  Mode V2").
+- **Public-repo cross-references** added; README now leads with a Pro
+  community badge and a dual-version callout pointing non-members at the
+  public open-source repo.
+- **Badges retargeted** to the public repo (`AgriciDaniel/claude-ads`) for
+  Version + CI, since shields.io cannot read private repos. New "AI
+  Marketing Hub Pro community" badge added.
+- **Repo references** updated across `.github/ISSUE_TEMPLATE/`,
+  `CITATION.cff`, `SECURITY.md`, `SUPPORT.md`, `CODE_OF_CONDUCT.md`,
+  `CONTRIBUTING.md`, `install.sh`, `install.ps1`, plugin / marketplace
+  manifests, and the two scripts that include UA strings or version refs.
+- **Script file modes** normalized: 5 CLI scripts at 755 (was 775
+  group-writable on author's umask), `url_utils.py` correctly stays 644
+  as a library.
+
+### Fixed
+
+- **Factual claims cited against primary sources.** Ten quantified claims
+  across `ads-meta`, `ads-apple`, `ads-budget`, `ads-google`,
+  `ads-microsoft`, and `ads-creative` were verified or corrected against
+  vendor / first-party documentation:
+  - Andromeda 10,000× capacity (Meta Engineering, Dec 2024)
+  - Confect 60% similarity threshold (confect.io)
+  - WWDC25 AAK configurable windows (Apple Developer session 221)
+  - AppTweak CPP +8% / +6.6% conversion lift (AppTweak benchmark)
+  - SoundCloud 58% CR / 39% CPI case study (AppTweak case study)
+  - 78% Personalized-Ads-off App Store search (Apple Q1 2022 data,
+    via 9to5Mac)
+  - Google AI Max 14% conversion lift (Google Ads blog, May 2025)
+  - Microsoft Copilot 73% CTR lift (Microsoft Advertising blog, Aug 2025)
+  - TikTok platform median ROAS 1.41–1.67 (reworded from a Smart+-specific
+    framing the original wording falsely implied)
+  - Demand Gen "20% more conversions" clarified to video+image vs
+    video-only at same CPA
+- **Stale `(latest: v1.5.1)` references** corrected after the public push
+  brought the public repo to v1.7.0 content.
+- **README badges** that were pointing at the private org repo and
+  rendering "no releases or repo not found"; retargeted to the public
+  mirror.
+- **Stale URL references** in 15 files swept from `AgriciDaniel/claude-ads`
+  to `AI-Marketing-Hub/claude-ads` and the corresponding plugin slug form
+  (`agricidaniel-claude-ads` → `ai-marketing-hub-claude-ads`).
+
+### Notes
+
+- **`presentations/v1.7.0-release/`** intentionally untracked (release-
+  marketing WIP, not shipped with the skill itself).
+- **In-progress visual representations** (5 architecture diagrams × A/B/C
+  variants = 15 new SVGs, plus a `branding/diagrams-preview.html` comparison
+  tool and `branding/scripts/` render automation) currently live in the
+  working tree and are NOT part of this release. They will land in a future
+  visual-system release once the variant selection is finalized.
+- **Repo location**: the canonical development location is now the private
+  `AI-Marketing-Hub/claude-ads` repo; `AgriciDaniel/claude-ads` is preserved
+  as the public mirror. Subsequent in-development work happens on the
+  private repo first.
+
 ## [1.7.0] - 2026-05-17
 
 Wave 2 of the 90-day "category leader" plan. Ships the cross-runtime install
