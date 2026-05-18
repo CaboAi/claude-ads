@@ -4,7 +4,7 @@
 
 # Claude Ads — Paid Advertising Audit Skill for Claude Code
 
-A manual audit of a single Google Ads account takes 4-6 hours of senior PPC time. **Claude Ads runs the same audit in 10-15 minutes**, scores it on a 0-100 weighted scale, and outputs a prioritized action plan — across Google, Meta, YouTube, LinkedIn, TikTok, Microsoft, Apple, and Amazon Ads. Local, deterministic, MIT-licensed.
+A manual audit of a single Google Ads account takes 4-6 hours of senior PPC time. **Claude Ads runs the same audit in 10-15 minutes**, scores it on a 0-100 weighted scale, and outputs a prioritized action plan — across Google, Meta, YouTube, LinkedIn, TikTok, Microsoft, Apple, and Amazon Ads. Built for **PPC agencies, in-house marketers, and freelance ad consultants**. Local, deterministic, MIT-licensed.
 
 [![Agent Skill](https://img.shields.io/badge/Agent%20Skills-Compatible-blue)](https://agentskills.io)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -98,7 +98,7 @@ Plus a PDF version (`/ads report`) with health score gauge, platform comparison 
 - [Features: what 250+ audit checks cover](#features-what-250-audit-checks-cover)
 - [Compared to manual / agency / commercial tools](#compared-to-manual--agency--commercial-tools)
 - [Use cases](#use-cases)
-- [Eval harness (Wave 2)](#eval-harness-wave-2)
+- [Eval harness — verified rigor](#eval-harness--verified-rigor)
 - [Architecture](#architecture)
 - [How it analyzes your ads](#how-it-analyzes-your-ads)
 - [FAQ](#faq)
@@ -199,7 +199,7 @@ cd claude-ads
 ## Demo
 
 <p align="center">
-  <img src="assets/demo.gif" alt="Claude Ads in action: /ads audit running across multiple platforms" width="100%">
+  <img src="assets/demo.gif" alt="Claude Ads in action: /ads audit dispatching 6 parallel subagents, returning Ads Health Score with platform breakdown and prioritized action plan" width="100%">
 </p>
 
 ## Quick Start
@@ -322,6 +322,8 @@ PDF audit reports for client deliverables — health score gauge, platform compa
 
 ## Features: what 250+ audit checks cover
 
+What every check actually does: catches the platform-specific blind spots that cost you spend. Andromeda creative-similarity suppression on Meta. Negative-keyword discipline gaps on Google AI Max. Andromeda-aware creative diversity scoring. AdAttributionKit configurable-window gaps on Apple. ACOS/TACOS targets misaligned with margin on Amazon. Consent Mode V2 missing on the landing page (silent revenue leak). These are the items a manual audit misses because the analyst is mostly checking what *used* to matter, not what platforms changed in 2026.
+
 ### Coverage by platform
 
 | Platform | Checks | Key areas |
@@ -416,7 +418,9 @@ Runs entirely on your local machine via Claude Code. No ad account data is sent 
 | **Custom benchmarks** | Manual | Manual | Vendor-fixed | **Edit local SKILL.md** |
 | **Data leaves machine?** | No (your spreadsheet) | Yes (sent to agency) | Yes (uploaded to vendor) | **No, fully local** |
 | **Lock-in** | None | High | High (data exit cost) | **None — MIT, your files** |
-| **Andromeda / AI Max / AdAttributionKit awareness** | Depends on analyst | Depends on agency seniority | Lagging (typically 6-12 mo behind) | **2026-current** |
+| **Andromeda / AI Max / AdAttributionKit awareness** | Depends on analyst | Depends on agency seniority | Lagging (typically 6-12 mo behind) | **Includes 2026 platform features** |
+
+> Cost benchmarks: manual audit assumes a senior PPC consultant at typical agency billable rates; agency engagement based on common discovery/audit deliverable scopes; commercial-tool subscriptions reflect published mid-tier pricing across the PPC audit category. Your numbers may differ.
 
 ## Use cases
 
@@ -426,9 +430,9 @@ Runs entirely on your local machine via Claude Code. No ad account data is sent 
 
 **Freelance PPC consultant onboarding a new client.** Runs `/ads audit` on the discovery call. Anchors the engagement scope with a real 0-100 score and 3 prioritized critical findings instead of a vague "I'll take a look and get back to you." Closes more retainers because the proof of value happens before the proposal.
 
-## Eval harness (Wave 2)
+## Eval harness — verified rigor
 
-41-test pytest suite in `tests/`, runs in CI on every commit:
+**41 tests, 41 passing, CI on every commit.** Pytest suite in `tests/`:
 
 - **Routing snapshots** — every documented trigger phrase routes to its expected sub-skill (catches description regressions)
 - **Check-catalog coverage** — bidirectional check between `tests/fixtures/check-catalog.yaml` (209 IDs) and every audit reference file; no orphan IDs, no untracked rows
@@ -515,6 +519,12 @@ Benchmarks and best practices differ significantly between a $500/month account 
 <summary><b>Does it support [platform] ads?</b></summary>
 
 Currently supported: Google, Meta (Facebook/Instagram), YouTube, LinkedIn, TikTok, Microsoft/Bing, Apple, and Amazon. Additional platforms (Reddit, CTV/OTT, Pinterest, Snapchat) are covered in `ads/references/additional-platforms.md` for strategic planning.
+</details>
+
+<details>
+<summary><b>How does it score financial KPIs like ROAS, CPA, ACOS, TACOS, LTV:CAC?</b></summary>
+
+Use `/ads math` for the financial calculator (CPA, ROAS, CPL, break-even analysis, impression-share opportunity sizing, budget forecasting, LTV:CAC ratio, MER). The full audit (`/ads audit`) automatically benchmarks your reported ROAS / CPA / CPL against industry-specific targets loaded from `ads/references/benchmarks.md`. For Amazon, `/ads amazon` scores ACOS and TACOS against category benchmarks and flags products where TACOS exceeds your contribution margin.
 </details>
 
 <details>
