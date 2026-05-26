@@ -12,7 +12,7 @@ abstract: >
   sub-skills, 11 parallel agents (including a regulatory-compliance agent
   covering the EU AI Act and the 22-state US privacy landscape), 12 industry
   templates, cross-platform attribution and server-side tracking deep dives,
-  PPC math, A/B test design, PDF report generation, and a 41-test pytest eval
+  PPC math, A/B test design, PDF report generation, and a 59-test pytest eval
   harness.
 authors:
   - alias: AgriciDaniel

@@ -33,13 +33,12 @@ A manual audit of a single Google Ads account takes 4-6 hours of senior PPC time
 - **In-house marketers owning paid across 4+ platforms**: second-pair-of-eyes before exec reviews. No human bias on which platform you favor.
 - **Freelance PPC consultants**: anchor day-1 client scope with a 10-minute audit. Win the engagement before you spend an hour on diagnostic.
 
-## What's new in v1.7.0 (Wave 2)
+## What's new in v1.8.0 (Wave 3)
 
-- **3 new sub-skills**: `/ads amazon` (Sponsored Products/Brands/Display, ACOS/TACOS), `/ads attribution` (AdAttributionKit + GA4 + Consent Mode V2), `/ads tracking` (sGTM + CAPI Gateway + dedup + hashing).
-- **41-test pytest eval harness** in `tests/`: routing snapshots, bidirectional 300-check catalog coverage, scoring math determinism, SSRF regression. Runs in CI on every commit.
-- **Cross-runtime install matrix**: `install.sh` / `install.ps1 --target=<host>` with whitelist validation for Claude Code, Codex CLI, Cursor, Windsurf, Gemini CLI, Goose.
-- **Deep platform rewrites**: `/ads google` for the AI Max era (`ai_max_setting.enable_ai_max`, AI Brief, FUE, brand exclusions). `/ads meta` for the Andromeda + GEM + Lattice era with Entity-ID clustering detection.
-- **10-Principle Thinking Framework**: every audit, plan, and creative output runs under a shared cognitive discipline. See [`ads/references/thinking-framework.md`](ads/references/thinking-framework.md).
+- **+91 audit checks** across 5 platforms, lifting the bidirectionally-verified catalog from 209 to **300**: Google Marketing Live 2026 (G81-G95), Meta MCP + March-3 attribution rebuild + GEM/Lattice/ARM (M51-M72), TikTok World 2026 (T29-T46), LinkedIn Off-Platform Event Ads + rename trap (L28-L46), Microsoft AI Max for Search (MS25-MS41).
+- **New `audit-regulatory-compliance` agent** (split from `audit-compliance`, now `audit-policy-compliance`): EU AI Act Article 50, the 22-state US privacy landscape, Privacy Sandbox shutdown, iOS 26 ATFP/LTP, DSA, and MCP write-action governance. Agents 10 to **11** (7 audit + 4 creative).
+- **Three agentic-era reference docs**: `mcp-integration.md` (official platform MCP servers + write-action governance), `compliance-requirements.md` (2026 regulatory surface), `meta-ai-stack.md` (Andromeda + GEM + Lattice + ARM), plus an automation-tier classifier and seven per-platform research notes.
+- **Apple + Amazon deltas** folded inline (multi-placement + iOS 26; Unified Campaign Manager, Collections, Prompts, Brand+/Performance+); `/ads attribution` and `/ads server-side-tracking` refreshed for iOS 26 / UCP / MCP governance.
 
 Full release notes: [CHANGELOG.md](CHANGELOG.md).
 
@@ -109,6 +108,7 @@ Plus a PDF version (`/ads report`) with health score gauge, platform comparison 
 - [Requirements](#requirements)
 - [Uninstall](#uninstall)
 - [Roadmap](#roadmap)
+- [Limitations](#limitations)
 - [Project info](#project-info)
 - [Related projects](#related-projects)
 - [Maintainer](#maintainer)
@@ -433,7 +433,7 @@ Runs entirely on your local machine via Claude Code. No ad account data is sent 
 
 ## Eval harness: verified rigor
 
-**41 tests, 41 passing, CI on every commit.** Pytest suite in `tests/`:
+**59 tests, 59 passing, CI on every commit.** Pytest suite in `tests/`:
 
 - **Routing snapshots**: every documented trigger phrase routes to its expected sub-skill (catches description regressions)
 - **Check-catalog coverage**: bidirectional check between `tests/fixtures/check-catalog.yaml` (300 IDs) and every audit reference file; no orphan IDs, no untracked rows
@@ -458,7 +458,7 @@ Rare among Claude Code skills. Makes the project auditable end-to-end and preven
 ~/.claude/skills/ads-*/            # 22 sub-skills (incl. ads-math, ads-test, ads-amazon, ads-attribution, ads-server-side-tracking)
 ~/.claude/skills/ads-plan/assets/  # 12 industry templates
 ~/.claude/agents/                  # 11 agents (7 audit + 4 creative)
-~/.claude/skills/ads/tests/        # 41-test pytest eval harness (Wave 2)
+~/.claude/skills/ads/tests/        # 59-test pytest eval harness
 ```
 
 ### How it works
@@ -579,10 +579,17 @@ irm https://raw.githubusercontent.com/AI-Marketing-Hub/claude-ads/main/uninstall
 ## Roadmap
 
 <p align="center">
-  <img src="assets/diagrams/05-roadmap-A.svg" alt="Wave roadmap: 12-month timeline from v1.5 stable through v1.7.x Wave 2 to v1.8.0 visual system and v2.0 multi-tenant" width="100%">
+  <img src="assets/diagrams/05-roadmap-A.svg" alt="Wave roadmap: timeline from v1.5 stable through v1.7.x Wave 2 to v1.8.0 Wave 3 and v2.0 multi-tenant" width="100%">
 </p>
 
-The 12-month delivery cadence from v1.5 stable through Wave 2 (v1.7.x, current) to Wave 3 (v1.8.0+, in active development on the private repo). Full per-release detail in [CHANGELOG.md](CHANGELOG.md).
+The delivery cadence from v1.5 stable through Wave 2 (v1.7.x) to **Wave 3 (v1.8.0, current)**, shipped to the private repo ahead of its original Q3 plan, with v2.0 (multi-tenant) ahead. Full per-release detail in [CHANGELOG.md](CHANGELOG.md).
+
+## Limitations
+
+- **Manual data input by default.** Claude Ads audits the data you provide (account exports, Events Manager screenshots, pasted metrics). It does not connect to platform APIs unless you wire up an optional MCP server, so it reflects the data you give it, not a live account.
+- **Catalog coverage is the 5 core platforms.** The 300 Google / Meta / LinkedIn / TikTok / Microsoft checks are bidirectionally verified in CI. Apple, Amazon, cross-platform, attribution + server-side, and the v1.8.0 regulatory checks run from inline thresholds and are not yet in the test-enforced catalog (Wave 3.x).
+- **Benchmarks are point-in-time (2026).** Platform features, dates, and figures move fast. Treat them as a current-as-of-release reference and confirm against official platform documentation before acting.
+- **Non-Claude hosts are experimental.** Verified on Claude Code; Codex CLI, Cursor, Windsurf, Gemini CLI, and Goose are best-effort.
 
 ## Project info
 
