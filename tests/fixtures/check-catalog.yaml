@@ -14,8 +14,8 @@
 #   - Hyphenated IDs (G-AI1, M-AN1, L-CRM1, T-SR1, MS-SI1): v1.5+ additions
 #   - Prefixes: G=Google, M=Meta, L=LinkedIn, T=TikTok, MS=Microsoft
 
-version: "1.1"
-last_updated: "2026-05-26"
+version: "2.0"
+last_updated: "2026-07-11"
 
 platforms:
   google:
@@ -205,7 +205,7 @@ platforms:
     reference: ads/references/linkedin-audit.md
     total_checks: 46
     skill: ads-linkedin
-    audit_agent: null
+    audit_agent: audit-linkedin
     check_ids:
       - L01
       - L02
@@ -259,7 +259,7 @@ platforms:
     reference: ads/references/tiktok-audit.md
     total_checks: 46
     skill: ads-tiktok
-    audit_agent: null
+    audit_agent: audit-tiktok
     check_ids:
       - T01
       - T02
@@ -313,7 +313,7 @@ platforms:
     reference: ads/references/microsoft-audit.md
     total_checks: 41
     skill: ads-microsoft
-    audit_agent: null
+    audit_agent: audit-microsoft
     check_ids:
       - MS01
       - MS02
@@ -358,16 +358,177 @@ platforms:
       - MS40
       - MS41
 
+  youtube:
+    reference: ads/references/youtube-audit.md
+    total_checks: 16
+    skill: ads-youtube
+    audit_agent: audit-youtube
+    check_ids:
+      - YT-M01
+      - YT-M02
+      - YT-M03
+      - YT-M04
+      - YT-S01
+      - YT-S02
+      - YT-A01
+      - YT-A02
+      - YT-C01
+      - YT-C02
+      - YT-C03
+      - YT-C04
+      - YT-B01
+      - YT-R01
+      - YT-P01
+      - YT-E01
+
+  apple:
+    reference: ads/references/apple-audit.md
+    total_checks: 16
+    skill: ads-apple
+    audit_agent: audit-apple
+    check_ids:
+      - AP-M01
+      - AP-M02
+      - AP-M03
+      - AP-M04
+      - AP-S01
+      - AP-S02
+      - AP-K01
+      - AP-K02
+      - AP-A01
+      - AP-C01
+      - AP-C02
+      - AP-B01
+      - AP-B02
+      - AP-R01
+      - AP-P01
+      - AP-E01
+
+  amazon:
+    reference: ads/references/amazon-audit.md
+    total_checks: 16
+    skill: ads-amazon
+    audit_agent: audit-amazon
+    check_ids:
+      - AMZ-M01
+      - AMZ-M02
+      - AMZ-M03
+      - AMZ-M04
+      - AMZ-S01
+      - AMZ-S02
+      - AMZ-T01
+      - AMZ-T02
+      - AMZ-R01
+      - AMZ-R02
+      - AMZ-C01
+      - AMZ-C02
+      - AMZ-B01
+      - AMZ-B02
+      - AMZ-P01
+      - AMZ-E01
+
+  reddit:
+    reference: ads/references/reddit-audit.md
+    total_checks: 16
+    skill: ads-reddit
+    audit_agent: audit-reddit
+    check_ids:
+      - RD-M01
+      - RD-M02
+      - RD-M03
+      - RD-M04
+      - RD-S01
+      - RD-S02
+      - RD-A01
+      - RD-A02
+      - RD-C01
+      - RD-C02
+      - RD-C03
+      - RD-R01
+      - RD-R02
+      - RD-B01
+      - RD-P01
+      - RD-E01
+
+  pinterest:
+    reference: ads/references/pinterest-audit.md
+    total_checks: 16
+    skill: ads-pinterest
+    audit_agent: audit-pinterest
+    check_ids:
+      - PN-M01
+      - PN-M02
+      - PN-M03
+      - PN-M04
+      - PN-R01
+      - PN-R02
+      - PN-R03
+      - PN-S01
+      - PN-S02
+      - PN-A01
+      - PN-C01
+      - PN-C02
+      - PN-C03
+      - PN-B01
+      - PN-P01
+      - PN-E01
+
+  snapchat:
+    reference: ads/references/snapchat-audit.md
+    total_checks: 16
+    skill: ads-snapchat
+    audit_agent: audit-snapchat
+    check_ids:
+      - SC-M01
+      - SC-M02
+      - SC-M03
+      - SC-M04
+      - SC-R01
+      - SC-R02
+      - SC-S01
+      - SC-S02
+      - SC-A01
+      - SC-C01
+      - SC-C02
+      - SC-C03
+      - SC-D01
+      - SC-B01
+      - SC-P01
+      - SC-E01
+
+  x:
+    reference: ads/references/x-audit.md
+    total_checks: 16
+    skill: ads-x
+    audit_agent: audit-x
+    check_ids:
+      - XA-M01
+      - XA-M02
+      - XA-M03
+      - XA-M04
+      - XA-S01
+      - XA-S02
+      - XA-A01
+      - XA-A02
+      - XA-C01
+      - XA-C02
+      - XA-C03
+      - XA-B01
+      - XA-R01
+      - XA-R02
+      - XA-P01
+      - XA-E01
+
 # Severity multipliers (from ads/references/scoring-system.md)
 severity_multipliers:
   critical: 5.0
   high: 3.0
-  medium: 1.5
-  low: 0.5
+  medium: 1.0
+  informational: 0.0
 
 # Result-to-points mapping
 result_points:
   pass: 1.0
-  warning: 0.5
   fail: 0.0
-  na: null   # excluded from total
+  unknown: null
+  not_applicable: null
