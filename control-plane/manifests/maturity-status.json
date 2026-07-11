@@ -25,7 +25,10 @@
         "Claim coverage, confidence, contradictions, licenses, and refresh dates pass audit."
       ],
       "satisfied": false,
-      "evidence": []
+      "evidence": [
+        "control-plane/manifests/source-ledger.json",
+        "control-plane/manifests/claim-ledger.json"
+      ]
     },
     {
       "id": "domain-integrated",
@@ -35,7 +38,11 @@
         "Capability status matches executable behavior and adapter evidence."
       ],
       "satisfied": false,
-      "evidence": []
+      "evidence": [
+        "claude_ads_core/adapters/csv_export.py",
+        "tests/fixtures/exports/",
+        "tests/core/test_adapters.py"
+      ]
     },
     {
       "id": "eval-verified",
@@ -67,8 +74,8 @@
   ],
   "blockers": [
     "The paid-advertising source and claim pack is not yet complete.",
-    "All twelve guidance contracts exist, but not every platform capability has complete source, normalized-ingestion, fixture, and contract-test evidence.",
-    "The capability manifest has not reached fixture-verified status for every platform.",
+    "All twelve portable CSV export-ingestion capabilities are fixture-verified, but the broader domain-integrated gate still lacks complete platform findings, report, and native-export mapping evidence.",
+    "Skill guidance is implemented but has not reached fixture-verified status for every platform.",
     "The full v2 evaluation and release matrix has not passed."
   ]
 }

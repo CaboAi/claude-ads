@@ -61,6 +61,18 @@
       "last_verified": "2026-07-11",
       "refresh_due": "2026-10-09",
       "owner": "architecture-owner"
+    },
+    {
+      "id": "CLM-0006",
+      "statement": "The v2 generic CSV adapter normalizes the documented portable export shape for all twelve target platforms, with one sanitized fixture per platform and a parameterized contract test; it does not provide native live API access or writes.",
+      "scope": "portable CSV export ingestion at git commit df8ebb1",
+      "classification": "evidence-based",
+      "verdict": "verified",
+      "source_ids": ["claude-ads-v2-export-adapter"],
+      "load_bearing": true,
+      "last_verified": "2026-07-11",
+      "refresh_due": "2026-08-10",
+      "owner": "adapter-owner"
     }
   ]
 }

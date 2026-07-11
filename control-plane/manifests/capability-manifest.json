@@ -9,7 +9,8 @@
       "target_tier": "first-class",
       "skill_path": "skills/ads-google/SKILL.md",
       "capabilities": [
-        {"id": "skill-guidance", "mode": "export-read", "status": "implemented", "implementation_paths": ["skills/ads-google/SKILL.md"], "fixture_paths": [], "test_paths": [], "source_ids": ["claude-ads-v181-tree"]},
+        {"id": "skill-guidance", "mode": "export-read", "status": "implemented", "implementation_paths": ["skills/ads-google/SKILL.md"], "fixture_paths": [], "test_paths": [], "source_ids": ["claude-ads-v181-tree", "google-ads-api-official"]},
+        {"id": "export-ingestion", "mode": "export-read", "status": "fixture-verified", "implementation_paths": ["claude_ads_core/adapters/csv_export.py"], "fixture_paths": ["tests/fixtures/exports/google.csv"], "test_paths": ["tests/core/test_adapters.py"], "source_ids": ["claude-ads-v2-export-adapter", "google-ads-api-official"]},
         {"id": "account-mutation", "mode": "live-write", "status": "disabled", "implementation_paths": [], "fixture_paths": [], "test_paths": [], "source_ids": [], "disabled_reason": "No approved v2 write adapter lifecycle."}
       ]
     },
@@ -19,7 +20,8 @@
       "target_tier": "first-class",
       "skill_path": "skills/ads-meta/SKILL.md",
       "capabilities": [
-        {"id": "skill-guidance", "mode": "export-read", "status": "implemented", "implementation_paths": ["skills/ads-meta/SKILL.md"], "fixture_paths": [], "test_paths": [], "source_ids": ["claude-ads-v181-tree"]},
+        {"id": "skill-guidance", "mode": "export-read", "status": "implemented", "implementation_paths": ["skills/ads-meta/SKILL.md"], "fixture_paths": [], "test_paths": [], "source_ids": ["claude-ads-v181-tree", "meta-marketing-api-official"]},
+        {"id": "export-ingestion", "mode": "export-read", "status": "fixture-verified", "implementation_paths": ["claude_ads_core/adapters/csv_export.py"], "fixture_paths": ["tests/fixtures/exports/meta.csv"], "test_paths": ["tests/core/test_adapters.py"], "source_ids": ["claude-ads-v2-export-adapter", "meta-marketing-api-official"]},
         {"id": "account-mutation", "mode": "live-write", "status": "disabled", "implementation_paths": [], "fixture_paths": [], "test_paths": [], "source_ids": [], "disabled_reason": "No approved v2 write adapter lifecycle."}
       ]
     },
@@ -29,7 +31,8 @@
       "target_tier": "first-class",
       "skill_path": "skills/ads-youtube/SKILL.md",
       "capabilities": [
-        {"id": "skill-guidance", "mode": "export-read", "status": "implemented", "implementation_paths": ["skills/ads-youtube/SKILL.md"], "fixture_paths": [], "test_paths": [], "source_ids": ["claude-ads-v181-tree"]},
+        {"id": "skill-guidance", "mode": "export-read", "status": "implemented", "implementation_paths": ["skills/ads-youtube/SKILL.md"], "fixture_paths": [], "test_paths": [], "source_ids": ["claude-ads-v181-tree", "youtube-google-ads-video-official"]},
+        {"id": "export-ingestion", "mode": "export-read", "status": "fixture-verified", "implementation_paths": ["claude_ads_core/adapters/csv_export.py"], "fixture_paths": ["tests/fixtures/exports/youtube.csv"], "test_paths": ["tests/core/test_adapters.py"], "source_ids": ["claude-ads-v2-export-adapter", "youtube-google-ads-video-official"]},
         {"id": "account-mutation", "mode": "live-write", "status": "disabled", "implementation_paths": [], "fixture_paths": [], "test_paths": [], "source_ids": [], "disabled_reason": "No approved v2 write adapter lifecycle."}
       ]
     },
@@ -39,7 +42,8 @@
       "target_tier": "first-class",
       "skill_path": "skills/ads-linkedin/SKILL.md",
       "capabilities": [
-        {"id": "skill-guidance", "mode": "export-read", "status": "implemented", "implementation_paths": ["skills/ads-linkedin/SKILL.md"], "fixture_paths": [], "test_paths": [], "source_ids": ["claude-ads-v181-tree"]},
+        {"id": "skill-guidance", "mode": "export-read", "status": "implemented", "implementation_paths": ["skills/ads-linkedin/SKILL.md"], "fixture_paths": [], "test_paths": [], "source_ids": ["claude-ads-v181-tree", "linkedin-marketing-api-official"]},
+        {"id": "export-ingestion", "mode": "export-read", "status": "fixture-verified", "implementation_paths": ["claude_ads_core/adapters/csv_export.py"], "fixture_paths": ["tests/fixtures/exports/linkedin.csv"], "test_paths": ["tests/core/test_adapters.py"], "source_ids": ["claude-ads-v2-export-adapter", "linkedin-marketing-api-official"]},
         {"id": "account-mutation", "mode": "live-write", "status": "disabled", "implementation_paths": [], "fixture_paths": [], "test_paths": [], "source_ids": [], "disabled_reason": "No approved v2 write adapter lifecycle."}
       ]
     },
@@ -49,7 +53,8 @@
       "target_tier": "first-class",
       "skill_path": "skills/ads-tiktok/SKILL.md",
       "capabilities": [
-        {"id": "skill-guidance", "mode": "export-read", "status": "implemented", "implementation_paths": ["skills/ads-tiktok/SKILL.md"], "fixture_paths": [], "test_paths": [], "source_ids": ["claude-ads-v181-tree"]},
+        {"id": "skill-guidance", "mode": "export-read", "status": "implemented", "implementation_paths": ["skills/ads-tiktok/SKILL.md"], "fixture_paths": [], "test_paths": [], "source_ids": ["claude-ads-v181-tree", "tiktok-business-api-official"]},
+        {"id": "export-ingestion", "mode": "export-read", "status": "fixture-verified", "implementation_paths": ["claude_ads_core/adapters/csv_export.py"], "fixture_paths": ["tests/fixtures/exports/tiktok.csv"], "test_paths": ["tests/core/test_adapters.py"], "source_ids": ["claude-ads-v2-export-adapter", "tiktok-business-api-official"]},
         {"id": "account-mutation", "mode": "live-write", "status": "disabled", "implementation_paths": [], "fixture_paths": [], "test_paths": [], "source_ids": [], "disabled_reason": "No approved v2 write adapter lifecycle."}
       ]
     },
@@ -59,7 +64,8 @@
       "target_tier": "first-class",
       "skill_path": "skills/ads-microsoft/SKILL.md",
       "capabilities": [
-        {"id": "skill-guidance", "mode": "export-read", "status": "implemented", "implementation_paths": ["skills/ads-microsoft/SKILL.md"], "fixture_paths": [], "test_paths": [], "source_ids": ["claude-ads-v181-tree"]},
+        {"id": "skill-guidance", "mode": "export-read", "status": "implemented", "implementation_paths": ["skills/ads-microsoft/SKILL.md"], "fixture_paths": [], "test_paths": [], "source_ids": ["claude-ads-v181-tree", "microsoft-advertising-api-official"]},
+        {"id": "export-ingestion", "mode": "export-read", "status": "fixture-verified", "implementation_paths": ["claude_ads_core/adapters/csv_export.py"], "fixture_paths": ["tests/fixtures/exports/microsoft.csv"], "test_paths": ["tests/core/test_adapters.py"], "source_ids": ["claude-ads-v2-export-adapter", "microsoft-advertising-api-official"]},
         {"id": "account-mutation", "mode": "live-write", "status": "disabled", "implementation_paths": [], "fixture_paths": [], "test_paths": [], "source_ids": [], "disabled_reason": "No approved v2 write adapter lifecycle."}
       ]
     },
@@ -69,7 +75,8 @@
       "target_tier": "first-class",
       "skill_path": "skills/ads-apple/SKILL.md",
       "capabilities": [
-        {"id": "skill-guidance", "mode": "export-read", "status": "implemented", "implementation_paths": ["skills/ads-apple/SKILL.md"], "fixture_paths": [], "test_paths": [], "source_ids": ["claude-ads-v181-tree"]},
+        {"id": "skill-guidance", "mode": "export-read", "status": "implemented", "implementation_paths": ["skills/ads-apple/SKILL.md"], "fixture_paths": [], "test_paths": [], "source_ids": ["claude-ads-v181-tree", "apple-ads-api-official"]},
+        {"id": "export-ingestion", "mode": "export-read", "status": "fixture-verified", "implementation_paths": ["claude_ads_core/adapters/csv_export.py"], "fixture_paths": ["tests/fixtures/exports/apple.csv"], "test_paths": ["tests/core/test_adapters.py"], "source_ids": ["claude-ads-v2-export-adapter", "apple-ads-api-official"]},
         {"id": "account-mutation", "mode": "live-write", "status": "disabled", "implementation_paths": [], "fixture_paths": [], "test_paths": [], "source_ids": [], "disabled_reason": "No approved v2 write adapter lifecycle."}
       ]
     },
@@ -79,7 +86,8 @@
       "target_tier": "first-class",
       "skill_path": "skills/ads-amazon/SKILL.md",
       "capabilities": [
-        {"id": "skill-guidance", "mode": "export-read", "status": "implemented", "implementation_paths": ["skills/ads-amazon/SKILL.md"], "fixture_paths": [], "test_paths": [], "source_ids": ["claude-ads-v181-tree"]},
+        {"id": "skill-guidance", "mode": "export-read", "status": "implemented", "implementation_paths": ["skills/ads-amazon/SKILL.md"], "fixture_paths": [], "test_paths": [], "source_ids": ["claude-ads-v181-tree", "amazon-ads-api-official"]},
+        {"id": "export-ingestion", "mode": "export-read", "status": "fixture-verified", "implementation_paths": ["claude_ads_core/adapters/csv_export.py"], "fixture_paths": ["tests/fixtures/exports/amazon.csv"], "test_paths": ["tests/core/test_adapters.py"], "source_ids": ["claude-ads-v2-export-adapter", "amazon-ads-api-official"]},
         {"id": "account-mutation", "mode": "live-write", "status": "disabled", "implementation_paths": [], "fixture_paths": [], "test_paths": [], "source_ids": [], "disabled_reason": "No approved v2 write adapter lifecycle."}
       ]
     },
@@ -90,6 +98,7 @@
       "skill_path": "skills/ads-reddit/SKILL.md",
       "capabilities": [
         {"id": "skill-guidance", "mode": "export-read", "status": "implemented", "implementation_paths": ["skills/ads-reddit/SKILL.md", "ads/references/reddit-audit.md", "agents/audit-reddit.md"], "fixture_paths": [], "test_paths": [], "source_ids": ["reddit-business-help"]},
+        {"id": "export-ingestion", "mode": "export-read", "status": "fixture-verified", "implementation_paths": ["claude_ads_core/adapters/csv_export.py"], "fixture_paths": ["tests/fixtures/exports/reddit.csv"], "test_paths": ["tests/core/test_adapters.py"], "source_ids": ["claude-ads-v2-export-adapter", "reddit-business-help"]},
         {"id": "account-mutation", "mode": "live-write", "status": "disabled", "implementation_paths": [], "fixture_paths": [], "test_paths": [], "source_ids": [], "disabled_reason": "No approved v2 write adapter lifecycle."}
       ]
     },
@@ -100,6 +109,7 @@
       "skill_path": "skills/ads-pinterest/SKILL.md",
       "capabilities": [
         {"id": "skill-guidance", "mode": "export-read", "status": "implemented", "implementation_paths": ["skills/ads-pinterest/SKILL.md", "ads/references/pinterest-audit.md", "agents/audit-pinterest.md"], "fixture_paths": [], "test_paths": [], "source_ids": ["pinterest-conversions-api"]},
+        {"id": "export-ingestion", "mode": "export-read", "status": "fixture-verified", "implementation_paths": ["claude_ads_core/adapters/csv_export.py"], "fixture_paths": ["tests/fixtures/exports/pinterest.csv"], "test_paths": ["tests/core/test_adapters.py"], "source_ids": ["claude-ads-v2-export-adapter", "pinterest-conversions-api"]},
         {"id": "account-mutation", "mode": "live-write", "status": "disabled", "implementation_paths": [], "fixture_paths": [], "test_paths": [], "source_ids": [], "disabled_reason": "No approved v2 write adapter lifecycle."}
       ]
     },
@@ -110,6 +120,7 @@
       "skill_path": "skills/ads-snapchat/SKILL.md",
       "capabilities": [
         {"id": "skill-guidance", "mode": "export-read", "status": "implemented", "implementation_paths": ["skills/ads-snapchat/SKILL.md", "ads/references/snapchat-audit.md", "agents/audit-snapchat.md"], "fixture_paths": [], "test_paths": [], "source_ids": ["snap-marketing-api"]},
+        {"id": "export-ingestion", "mode": "export-read", "status": "fixture-verified", "implementation_paths": ["claude_ads_core/adapters/csv_export.py"], "fixture_paths": ["tests/fixtures/exports/snapchat.csv"], "test_paths": ["tests/core/test_adapters.py"], "source_ids": ["claude-ads-v2-export-adapter", "snap-marketing-api"]},
         {"id": "account-mutation", "mode": "live-write", "status": "disabled", "implementation_paths": [], "fixture_paths": [], "test_paths": [], "source_ids": [], "disabled_reason": "No approved v2 write adapter lifecycle."}
       ]
     },
@@ -120,6 +131,7 @@
       "skill_path": "skills/ads-x/SKILL.md",
       "capabilities": [
         {"id": "skill-guidance", "mode": "export-read", "status": "implemented", "implementation_paths": ["skills/ads-x/SKILL.md", "ads/references/x-audit.md", "agents/audit-x.md"], "fixture_paths": [], "test_paths": [], "source_ids": ["x-conversion-tracking"]},
+        {"id": "export-ingestion", "mode": "export-read", "status": "fixture-verified", "implementation_paths": ["claude_ads_core/adapters/csv_export.py"], "fixture_paths": ["tests/fixtures/exports/x.csv"], "test_paths": ["tests/core/test_adapters.py"], "source_ids": ["claude-ads-v2-export-adapter", "x-conversion-tracking"]},
         {"id": "account-mutation", "mode": "live-write", "status": "disabled", "implementation_paths": [], "fixture_paths": [], "test_paths": [], "source_ids": [], "disabled_reason": "No approved v2 write adapter lifecycle."}
       ]
     }
