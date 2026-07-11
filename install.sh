@@ -358,6 +358,14 @@ main() {
         install_file "$source_file" "${REFERENCES_DIR}/$(basename -- "$source_file")"
     done
     record_dir "$REFERENCES_DIR"
+    if [ -d "${SOURCE_DIR}/ads/agents" ]; then
+        INTERFACE_DIR=$(ensure_owned_dir "${SKILL_DIR}/agents")
+        for source_file in "${SOURCE_DIR}/ads/agents/"*.yaml; do
+            [ -f "$source_file" ] || continue
+            install_file "$source_file" "${INTERFACE_DIR}/$(basename -- "$source_file")"
+        done
+        record_dir "$INTERFACE_DIR"
+    fi
 
     # Copy sub-skills
     echo "→ Installing sub-skills..."
@@ -407,7 +415,7 @@ main() {
         if command -v python3 >/dev/null 2>&1; then
             VENV_DIR="${SKILL_DIR}/.venv"
             if python3 -m venv "${VENV_DIR}" \
-                && "${VENV_DIR}/bin/python" -m pip install -q -r "${SKILL_DIR}/requirements.txt"; then
+                && "${VENV_DIR}/bin/python" -m pip install -q "${SOURCE_DIR}" -r "${SKILL_DIR}/requirements.txt"; then
                 printf 'R\t%s\n' "$VENV_DIR" >> "$MANIFEST_TMP"
                 echo "  ✓ Python dependencies installed in ${VENV_DIR}"
             else
@@ -449,10 +457,13 @@ main() {
     echo "    Agents: ${AGENT_DIR}"
     echo ""
     echo "  Bundled:"
+    SUB_SKILL_COUNT=$(find "${SOURCE_DIR}/skills" -mindepth 2 -maxdepth 2 -name SKILL.md -type f | wc -l | tr -d ' ')
+    AGENT_COUNT=$(find "${SOURCE_DIR}/agents" -maxdepth 1 -name '*.md' -type f | wc -l | tr -d ' ')
+    REFERENCE_COUNT=$(find "${SOURCE_DIR}/ads/references" -maxdepth 1 -name '*.md' -type f | wc -l | tr -d ' ')
     echo "    • 1 main skill (ads orchestrator)"
-    echo "    • 22 sub-skills (platform + functional + creative)"
-    echo "    • 10 agents (6 audit + 4 creative)"
-    echo "    • 25 reference files"
+    echo "    • ${SUB_SKILL_COUNT} sub-skills (platform + lifecycle + functional + creative)"
+    echo "    • ${AGENT_COUNT} agents"
+    echo "    • ${REFERENCE_COUNT} reference files"
     echo "    • 12 industry templates"
     echo ""
     echo "Usage:"

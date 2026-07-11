@@ -4,15 +4,15 @@
     "name": "AgriciDaniel"
   },
   "metadata": {
-    "description": "Multi-host paid advertising audit, optimization, and AI creative generation conforming to the Agent Skills open standard.",
-    "version": "1.8.1"
+    "description": "Claude-first, portable paid-media operations across 12 advertising platforms.",
+    "version": "2.0.0"
   },
   "plugins": [
     {
       "name": "claude-ads",
       "source": "./",
-      "description": "Multi-host paid advertising audit & optimization skill conforming to the Agent Skills open standard. Verified on Claude Code; experimental on Codex CLI, Cursor, Windsurf, Gemini CLI, Goose. 300+ checks across Google, Meta, YouTube, LinkedIn, TikTok, Microsoft, Apple & Amazon Ads. 22 sub-skills, 11 parallel agents (incl. a regulatory-compliance agent for EU AI Act + 22-state US privacy), 12 industry templates, attribution and server-side tracking deep dives, AI creative generation, PPC math, A/B test design, PDF reports, 59-test pytest eval harness.",
-      "version": "1.8.1",
+      "description": "Claude-first, portable paid-media operations across 12 advertising platforms with source-grounded audits, deterministic scoring, lifecycle workflows, versioned JSON reports, and capability-gated account changes.",
+      "version": "2.0.0",
       "author": {
         "name": "AgriciDaniel"
       },
@@ -32,6 +32,10 @@
         "apple-ads",
         "amazon-ads",
         "youtube-ads",
+        "reddit-ads",
+        "pinterest-ads",
+        "snapchat-ads",
+        "x-ads",
         "attribution",
         "server-side-tracking",
         "retail-media",

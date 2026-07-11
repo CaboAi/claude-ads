@@ -5,6 +5,56 @@ All notable changes to claude-ads are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-07-11
+
+Major architecture release for professional paid-media operations.
+
+### Added
+
+* First-class platform contracts for Reddit, Pinterest, Snapchat, and X, bringing
+  the platform surface to twelve dedicated skills, references, audit workers, and
+  catalog entries.
+* Lifecycle skills for setup, launch, monitor, optimize, research refresh,
+  validation/status, and JSON-first report rendering.
+* Versioned account snapshot, run manifest, control, finding, and report contracts
+  plus a dependency-light CLI.
+* Deterministic category-first scoring with severity-weighted evidence coverage,
+  provisional and insufficient-evidence states, and spend-aware portfolio scoring.
+* Hybrid source, claim, capability, safety, maturity, orchestration, publishing,
+  issue, and pull-request control plane.
+* Capability-led adapter framework, sanitized export fixtures, portable interface
+  metadata, research/source/skill/release verifier agents, and expanded routing
+  evaluations.
+
+### Changed
+
+* Rebuilt the main and platform prompts around progressive disclosure, explicit
+  precedence, untrusted-input boundaries, schema-valid worker results, partial
+  failure semantics, and artifact-backed completion claims.
+* Replaced fixed report filenames and prose-only aggregation with unique run
+  manifests and versioned JSON as the system of record.
+* Reclassified optional, beta, premium, unavailable, and ineligible features as
+  unscored opportunities rather than account-health penalties.
+* Removed universal CPA, budget, learning-phase, attribution, and feature-adoption
+  rules from the runtime prompts.
+* Installation now uses authenticated/local sources, a managed environment,
+  generated counts, and an exact ownership manifest.
+
+### Security
+
+* Added pre-dispatch SSRF controls for HTTP and Playwright navigation, redirects,
+  frames, and subresources; service workers and downloads are disabled.
+* Added safe output-root and symlink containment, credential redaction, private
+  corpus boundaries, prompt-injection rules, and fail-closed mutation gates.
+* Uninstall refuses namespace globs, tampered manifests, unowned files, and
+  canonical-path escapes.
+
+### Breaking
+
+* v2 JSON contracts and run-directory outputs replace v1 fixed report files.
+* Permanent account-object deletion is unsupported; live writes remain disabled
+  until each exact platform operation passes capability-specific release gates.
+
 ## [1.8.1] - 2026-05-27
 
 Documentation and metadata patch on top of v1.8.0. No code, check-catalog, or

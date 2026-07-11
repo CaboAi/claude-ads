@@ -68,6 +68,17 @@ def test_manifest_owned_uninstall_preserves_unrelated_ads_skill(tmp_path):
     assert not (skills / ".claude-ads-claude.manifest").exists()
 
 
+def test_installer_includes_portable_interface_and_all_platform_surfaces(tmp_path):
+    skills, agents = _install(tmp_path)
+    assert (skills / "ads" / "agents" / "openai.yaml").is_file()
+    for platform in (
+        "google", "meta", "youtube", "linkedin", "tiktok", "microsoft",
+        "apple", "amazon", "reddit", "pinterest", "snapchat", "x",
+    ):
+        assert (skills / f"ads-{platform}" / "SKILL.md").is_file()
+        assert (agents / f"audit-{platform}.md").is_file()
+
+
 def test_tampered_manifest_fails_before_removing_files(tmp_path):
     skills, agents = _install(tmp_path)
     manifest = skills / ".claude-ads-claude.manifest"

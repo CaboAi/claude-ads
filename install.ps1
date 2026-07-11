@@ -198,6 +198,17 @@ function Main {
             [void]$OwnedFiles.Add($Destination)
         }
         [void]$OwnedDirs.Add((Join-Path $SkillDirResolved "references"))
+        $InterfaceSource = Join-Path $SourceDir "ads\agents"
+        if (Test-Path $InterfaceSource) {
+            $InterfaceDir = Join-Path $SkillDirResolved "agents"
+            New-Item -ItemType Directory -Path $InterfaceDir -Force | Out-Null
+            Get-ChildItem "$InterfaceSource\*.yaml" -File | ForEach-Object {
+                $Destination = Join-Path $InterfaceDir $_.Name
+                Copy-Item $_.FullName -Destination $Destination -Force
+                [void]$OwnedFiles.Add($Destination)
+            }
+            [void]$OwnedDirs.Add($InterfaceDir)
+        }
 
         # Copy sub-skills
         Write-Host "Installing sub-skills..."
@@ -255,7 +266,7 @@ function Main {
             if ($Python) {
                 & $Python.Source -m venv $VenvDir
                 if ($LASTEXITCODE -eq 0) {
-                    & "$VenvDir\Scripts\python.exe" -m pip install -q -r "$SkillDirResolved\requirements.txt"
+                    & "$VenvDir\Scripts\python.exe" -m pip install -q $SourceDir -r "$SkillDirResolved\requirements.txt"
                 }
             }
             if ($Python -and $LASTEXITCODE -eq 0) {
@@ -304,10 +315,13 @@ function Main {
         Write-Host "    Agents: $AgentDirResolved"
         Write-Host ""
         Write-Host "  Bundled:"
+        $SubSkillCount = @(Get-ChildItem "$SourceDir\skills" -Directory | Where-Object { Test-Path (Join-Path $_.FullName "SKILL.md") }).Count
+        $AgentCount = @(Get-ChildItem "$SourceDir\agents\*.md" -File).Count
+        $ReferenceCount = @(Get-ChildItem "$SourceDir\ads\references\*.md" -File).Count
         Write-Host "    - 1 main skill (ads orchestrator)"
-        Write-Host "    - 22 sub-skills (platform + functional + creative)"
-        Write-Host "    - 10 agents (6 audit + 4 creative)"
-        Write-Host "    - 25 reference files"
+        Write-Host "    - $SubSkillCount sub-skills (platform + lifecycle + functional + creative)"
+        Write-Host "    - $AgentCount agents"
+        Write-Host "    - $ReferenceCount reference files"
         Write-Host "    - 12 industry templates"
         Write-Host ""
         Write-Host "Usage:"
