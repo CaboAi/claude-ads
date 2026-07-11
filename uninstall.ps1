@@ -55,8 +55,10 @@ function Main {
         throw "Invalid or mismatched ownership manifest: $ManifestPath"
     }
 
-    $SkillRoot = [IO.Path]::GetFullPath($SkillBase).TrimEnd('\') + '\'
-    $AgentRoot = [IO.Path]::GetFullPath($AgentDirResolved).TrimEnd('\') + '\'
+    $Separators = [char[]]@([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+    $Boundary = [string][IO.Path]::DirectorySeparatorChar
+    $SkillRoot = [IO.Path]::GetFullPath($SkillBase).TrimEnd($Separators) + $Boundary
+    $AgentRoot = [IO.Path]::GetFullPath($AgentDirResolved).TrimEnd($Separators) + $Boundary
     function Assert-OwnedPath([string]$Path) {
         $FullPath = [IO.Path]::GetFullPath($Path)
         $InSkill = $FullPath.StartsWith($SkillRoot, [StringComparison]::OrdinalIgnoreCase)
