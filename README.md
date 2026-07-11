@@ -44,7 +44,8 @@ read or write integration differs by platform.
   invented certainty.
 - Source, claim, capability, safety, maturity, and ecosystem-disposition manifests
   gate product claims.
-- Browser and HTTP access use centralized pre-request SSRF defenses.
+- HTTP access pins validated DNS answers through the connection boundary. Browser
+  dispatch fails closed unless an external OS/container egress sandbox is attested.
 - Installations use a managed environment and ownership manifest; uninstall never
   deletes unrelated `ads-*` skills.
 - Account mutations follow draft → approve → apply → verify → audit → rollback.

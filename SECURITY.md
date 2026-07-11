@@ -20,7 +20,11 @@ Only the latest version receives security updates.
 - Install scripts write only to the configured host roots, canonicalize destinations,
   reject symlink escapes, and record an exact ownership manifest
 - Python dependencies install in isolated virtual environments
-- Shared SSRF validation module (`scripts/url_utils.py`) gates every user-supplied URL — IPv4 RFC1918 / loopback / link-local / CGNAT and IPv6 unspecified / loopback / ULA / link-local / IPv4-mapped are all blocked, with fail-closed DNS resolution
+- Shared SSRF validation (`scripts/url_utils.py`) rejects non-public IPv4/IPv6,
+  pins Requests to the validated numeric address while preserving Host/SNI/TLS
+  verification, and re-enters the guard for every redirect. Playwright cannot pin
+  Chromium's socket resolution, so browser dispatch is denied unless an external
+  OS/container egress sandbox is explicitly attested.
 - Error messages are scrubbed via `sanitize_error()` before reaching stdout, JSON output, or audit reports — strips `key=`, `token=`, `secret=`, `password=`, and bare `Bearer <token>` substrings
 - GitHub Actions are pinned to full commit SHAs; Dependabot auto-merge is restricted to patch updates only
 - `pip-audit` runs on every CI build and fails on any reported vulnerability (no severity threshold — strictest policy)
@@ -36,7 +40,7 @@ The following endpoints may be contacted at runtime. All user-supplied URLs pass
 | `api.stability.ai` | Stability AI image generation (fallback path) | `generate_image.py` | API key (env var) |
 | `api.replicate.com` | Replicate model invocation (fallback path) | `generate_image.py` | API key (env var) |
 | Replicate-returned result URL | Fetch generated image bytes | `generate_image.py` | HTTPS check + SSRF revalidation via `url_utils.validate_url` (v1.7.0+) |
-| User-supplied URLs | Landing page analysis, screenshot capture, page fetch | `analyze_landing.py`, `capture_screenshot.py`, `fetch_page.py` | Pre-dispatch SSRF guard for requests, redirects, frames, and browser subresources |
+| User-supplied URLs | Landing page analysis, screenshot capture, page fetch | `analyze_landing.py`, `capture_screenshot.py`, `fetch_page.py` | DNS-pinned HTTP; browser default-deny unless external egress sandbox is attested, plus per-request validation |
 | `github.com` (read-only, via git clone) | Skill installation | `install.sh`, `install.ps1` | Hardcoded repo URL |
 | PyPI (`pypi.org`, `files.pythonhosted.org`) | Python dependency install | `install.sh`, `install.ps1` | Hardcoded; trusted by `pip` |
 
