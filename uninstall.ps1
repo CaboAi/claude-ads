@@ -3,16 +3,17 @@
 .SYNOPSIS
     Claude Ads Uninstaller for Windows (multi-host).
 .DESCRIPTION
-    Removes every ads-* sub-skill directory plus the orchestrator and bundled
-    agents from the chosen host's install root. Uses glob discovery so new
-    sub-skills don't require uninstaller updates.
+    Removes only paths listed in install.ps1's ownership manifest. Unrelated
+    ads-* skills and agents are never discovered or deleted by namespace.
 .PARAMETER Target
     Which host CLI to uninstall from. Default: claude.
 #>
 
 param(
     [ValidateSet('claude','codex','cursor','windsurf','gemini','goose')]
-    [string]$Target = 'claude'
+    [string]$Target = 'claude',
+    [string]$SkillDir = '',
+    [string]$AgentDir = ''
 )
 
 $ErrorActionPreference = "Stop"
@@ -32,41 +33,54 @@ function Resolve-TargetPaths {
 
 function Main {
     $paths = Resolve-TargetPaths -T $Target
-    $SkillBase = $paths.SkillBase
-    $AgentDir = $paths.AgentDir
+    $SkillBase = if ($SkillDir) { $SkillDir } else { $paths.SkillBase }
+    $AgentDirResolved = if ($AgentDir) { $AgentDir } else { $paths.AgentDir }
+    $ManifestPath = Join-Path $SkillBase ".claude-ads-$Target.manifest.json"
 
-    Write-Host "Uninstalling Claude Ads from $SkillBase and $AgentDir..."
-
-    # Remove orchestrator
-    $MainSkill = Join-Path $SkillBase "ads"
-    if (Test-Path $MainSkill) {
-        Remove-Item -Path $MainSkill -Recurse -Force
+    if (-not (Test-Path $ManifestPath -PathType Leaf)) {
+        throw "Ownership manifest not found: $ManifestPath. Refusing namespace-based deletion."
     }
 
-    # Remove all ads-* sub-skills via glob
-    if (Test-Path $SkillBase) {
-        Get-ChildItem -Path $SkillBase -Directory -Filter "ads-*" -ErrorAction SilentlyContinue | ForEach-Object {
-            Remove-Item -Path $_.FullName -Recurse -Force
+    $Manifest = Get-Content $ManifestPath -Raw | ConvertFrom-Json
+    if ($Manifest.version -ne 1 -or $Manifest.target -ne $Target) {
+        throw "Invalid or mismatched ownership manifest: $ManifestPath"
+    }
+
+    $SkillRoot = [IO.Path]::GetFullPath($SkillBase).TrimEnd('\') + '\'
+    $AgentRoot = [IO.Path]::GetFullPath($AgentDirResolved).TrimEnd('\') + '\'
+    function Assert-OwnedPath([string]$Path) {
+        $FullPath = [IO.Path]::GetFullPath($Path)
+        $InSkill = $FullPath.StartsWith($SkillRoot, [StringComparison]::OrdinalIgnoreCase)
+        $InAgents = $FullPath.StartsWith($AgentRoot, [StringComparison]::OrdinalIgnoreCase)
+        if (-not ($InSkill -or $InAgents)) {
+            throw "Unsafe ownership-manifest path: $Path"
+        }
+        return $FullPath
+    }
+
+    $AllOwnedPaths = @($Manifest.files) + @($Manifest.directories) + @($Manifest.recursive_directories)
+    foreach ($OwnedPath in $AllOwnedPaths) { $null = Assert-OwnedPath $OwnedPath }
+
+    Write-Host "Uninstalling Claude Ads from $SkillBase and $AgentDirResolved..."
+
+    foreach ($OwnedFile in @($Manifest.files)) {
+        $FullPath = Assert-OwnedPath $OwnedFile
+        if (Test-Path $FullPath) { Remove-Item -LiteralPath $FullPath -Force }
+    }
+
+    foreach ($OwnedDir in @($Manifest.recursive_directories)) {
+        $FullPath = Assert-OwnedPath $OwnedDir
+        if (Test-Path $FullPath) { Remove-Item -LiteralPath $FullPath -Recurse -Force }
+    }
+
+    foreach ($OwnedDir in @($Manifest.directories) | Sort-Object Length -Descending) {
+        $FullPath = Assert-OwnedPath $OwnedDir
+        if (Test-Path $FullPath) {
+            Remove-Item -LiteralPath $FullPath -ErrorAction SilentlyContinue
         }
     }
 
-    # Remove bundled audit + creative agents.
-    # NOTE: Keep this list in sync with the contents of `agents/` in the repo.
-    # install.ps1 uses `Copy-Item agents\*.md` so any new agent file added
-    # there must also be appended below. Pre-v1.7.1 the list contained
-    # non-existent entries (audit-amazon, audit-attribution, audit-server-side)
-    # and missed the actual shipped agents.
-    $Agents = @(
-        "audit-budget", "audit-compliance", "audit-creative",
-        "audit-google", "audit-meta", "audit-tracking",
-        "copy-writer", "creative-strategist", "format-adapter", "visual-designer"
-    )
-    foreach ($agent in $Agents) {
-        $AgentPath = Join-Path $AgentDir "$agent.md"
-        if (Test-Path $AgentPath) {
-            Remove-Item -Path $AgentPath -Force
-        }
-    }
+    Remove-Item -LiteralPath $ManifestPath -Force
 
     Write-Host "[OK] Claude Ads uninstalled." -ForegroundColor Green
 }

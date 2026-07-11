@@ -7,9 +7,8 @@ set -euo pipefail
 #   bash uninstall.sh                  # default: --target=claude
 #   bash uninstall.sh --target=codex
 #
-# Removes every directory under <SKILL_BASE>/ads-* plus the orchestrator at
-# <SKILL_BASE>/ads, plus the bundled audit + creative agents under <AGENT_DIR>.
-# Uses glob discovery so new sub-skills don't require uninstaller updates.
+# Removes only files and directories recorded by install.sh's ownership
+# manifest. Unrelated ads-* skills and agents are never discovered by glob.
 
 resolve_target_paths() {
     local target="$1"
@@ -25,15 +24,40 @@ resolve_target_paths() {
     return 0
 }
 
+validate_install_path() {
+    local path="$1"
+    [ -z "$path" ] && return 1
+    case "$path" in -*) return 1 ;; esac
+    case "$path" in *[\;\&\|\$\(\)\<\>\`\\]*) return 1 ;; esac
+    case "$path" in *..*) return 1 ;; esac
+    case "$path" in //*|\\\\*) return 1 ;; esac
+    case "$path" in *$'\n'*|*$'\r'*|*$'\t'*) return 1 ;; esac
+    return 0
+}
+
+is_owned_path() {
+    local path="$1"
+    case "$path" in
+        "${SKILL_BASE}"/*|"${AGENT_DIR}"/*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 main() {
     local TARGET="claude"
+    local SKILL_DIR_OVERRIDE=""
+    local AGENT_DIR_OVERRIDE=""
 
     while [ $# -gt 0 ]; do
         case "$1" in
             --target=*) TARGET="${1#*=}" ;;
             --target)   shift; [ $# -eq 0 ] && { echo "✗ --target requires a value" >&2; exit 1; }; TARGET="$1" ;;
+            --skill-dir=*) SKILL_DIR_OVERRIDE="${1#*=}" ;;
+            --skill-dir) shift; [ $# -eq 0 ] && { echo "✗ --skill-dir requires a value" >&2; exit 1; }; SKILL_DIR_OVERRIDE="$1" ;;
+            --agent-dir=*) AGENT_DIR_OVERRIDE="${1#*=}" ;;
+            --agent-dir) shift; [ $# -eq 0 ] && { echo "✗ --agent-dir requires a value" >&2; exit 1; }; AGENT_DIR_OVERRIDE="$1" ;;
             --help|-h)
-                echo "Usage: bash uninstall.sh [--target=<claude|codex|cursor|windsurf|gemini|goose>]"
+                echo "Usage: bash uninstall.sh [--target=<host>] [--skill-dir=<path>] [--agent-dir=<path>]"
                 exit 0
                 ;;
             *) echo "✗ Unknown argument: $1" >&2; exit 1 ;;
@@ -47,30 +71,56 @@ main() {
         exit 1
     fi
 
-    echo "→ Uninstalling Claude Ads from ${SKILL_BASE} and ${AGENT_DIR}..."
-
-    # Remove orchestrator (with references + scripts)
-    rm -rf "${SKILL_BASE}/ads"
-
-    # Remove all ads-* sub-skills via glob (no hardcoded list — new sub-skills
-    # don't require an uninstaller update)
-    if [ -d "${SKILL_BASE}" ]; then
-        for d in "${SKILL_BASE}"/ads-*/; do
-            [ -d "$d" ] && rm -rf "$d"
-        done
+    if [ -n "$SKILL_DIR_OVERRIDE" ]; then
+        validate_install_path "$SKILL_DIR_OVERRIDE" || { echo "✗ Invalid --skill-dir" >&2; exit 1; }
+        SKILL_BASE="$SKILL_DIR_OVERRIDE"
+    fi
+    if [ -n "$AGENT_DIR_OVERRIDE" ]; then
+        validate_install_path "$AGENT_DIR_OVERRIDE" || { echo "✗ Invalid --agent-dir" >&2; exit 1; }
+        AGENT_DIR="$AGENT_DIR_OVERRIDE"
     fi
 
-    # Remove bundled audit + creative agents.
-    # ⚠ Keep this list in sync with the contents of `agents/` in the repo. The
-    # installer uses `cp agents/*.md` so any new agent file added there must
-    # also be appended below. The previous list contained non-existent
-    # entries (audit-amazon, audit-attribution, audit-server-side) and missed
-    # the actual shipped agents — fixed in v1.7.1.
-    for agent in \
-        audit-budget audit-compliance audit-creative audit-google audit-meta audit-tracking \
-        copy-writer creative-strategist format-adapter visual-designer; do
-        rm -f "${AGENT_DIR}/${agent}.md"
-    done
+    local MANIFEST_PATH="${SKILL_BASE}/.claude-ads-${TARGET}.manifest"
+    if [ ! -f "$MANIFEST_PATH" ]; then
+        echo "✗ Ownership manifest not found: ${MANIFEST_PATH}" >&2
+        echo "  Refusing namespace-based deletion. Remove a legacy install manually after reviewing its files." >&2
+        exit 1
+    fi
+
+    echo "→ Uninstalling Claude Ads from ${SKILL_BASE} and ${AGENT_DIR}..."
+
+    # Validate the complete manifest before deleting anything. A tampered
+    # manifest must fail atomically rather than turning into an arbitrary rm.
+    while IFS=$'\t' read -r kind path; do
+        case "$kind" in
+            V|T) continue ;;
+            F|D|R)
+                is_owned_path "$path" || {
+                    echo "✗ Unsafe ownership-manifest path: ${path}" >&2
+                    exit 1
+                }
+                ;;
+            *) echo "✗ Unknown ownership-manifest record: ${kind}" >&2; exit 1 ;;
+        esac
+    done < "$MANIFEST_PATH"
+
+    while IFS=$'\t' read -r kind path; do
+        [ "$kind" = "F" ] || continue
+        [ -e "$path" ] || [ -L "$path" ] || continue
+        rm -f -- "$path"
+    done < "$MANIFEST_PATH"
+
+    while IFS=$'\t' read -r kind path; do
+        [ "$kind" = "R" ] || continue
+        rm -rf -- "$path"
+    done < "$MANIFEST_PATH"
+
+    while IFS=$'\t' read -r kind path; do
+        [ "$kind" = "D" ] || continue
+        rmdir -- "$path" 2>/dev/null || true
+    done < "$MANIFEST_PATH"
+
+    rm -f -- "$MANIFEST_PATH"
 
     echo "✓ Claude Ads uninstalled."
 }

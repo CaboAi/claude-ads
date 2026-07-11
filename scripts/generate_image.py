@@ -44,7 +44,7 @@ from urllib.parse import urlparse
 # Single source of truth for credential redaction (see scripts/url_utils.py).
 # Re-exported under the local _sanitize_error name so existing call sites do
 # not need to change.
-from url_utils import sanitize_error as _sanitize_error
+from url_utils import guarded_request, resolve_output_path, sanitize_error as _sanitize_error
 
 # Aspect ratio shorthand → (width, height)
 ASPECT_RATIOS = {
@@ -290,7 +290,15 @@ def generate_stability(prompt: str, width: int, height: int, api_key: str, model
         "aspect_ratio": _nearest_stability_ratio(width, height),
         "output_format": "png",
     }
-    resp = requests.post(url, headers=headers, files={"none": ""}, data=data, timeout=120)
+    resp = guarded_request(
+        requests,
+        "POST",
+        url,
+        headers=headers,
+        files={"none": ""},
+        data=data,
+        timeout=120,
+    )
     if resp.status_code == 200:
         return resp.content
     raise RuntimeError(f"Stability API error {resp.status_code}: {resp.text[:200]}")
@@ -347,7 +355,7 @@ def generate_replicate(prompt: str, width: int, height: int, api_key: str, model
         raise RuntimeError(f"Replicate URL failed SSRF validation: {ve}") from ve
     # allow_redirects=False — the SSRF check above only validated the original
     # URL. A redirect target could be a private IP; refuse to follow at all.
-    resp = requests.get(url, timeout=120, allow_redirects=False)
+    resp = guarded_request(requests, "GET", url, timeout=120)
     resp.raise_for_status()
     return resp.content
 
@@ -427,7 +435,8 @@ def run_batch(batch_file: str, output_dir: str, provider: str, model: str | None
         print(f"Error: Batch file contains {len(jobs)} jobs, max is {MAX_BATCH_SIZE}", file=sys.stderr)
         sys.exit(1)
 
-    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    output_dir_path = resolve_output_path(output_dir)
+    output_dir_path.mkdir(parents=True, exist_ok=True)
     results = []
 
     for i, job in enumerate(jobs):
@@ -436,7 +445,7 @@ def run_batch(batch_file: str, output_dir: str, provider: str, model: str | None
         output_name = job.get("output", f"image_{i:03d}.png")
         # Security: strip path components to prevent directory traversal
         output_name = Path(output_name).name
-        output_path = str(Path(output_dir) / output_name)
+        output_path = str(resolve_output_path(output_dir_path / output_name))
         reference_image = job.get("reference_image", None)
         if reference_image and Path(reference_image).suffix.lower() not in _ALLOWED_IMAGE_EXTENSIONS:
             print(f"  ⚠ Skipping invalid reference image: {reference_image}", file=sys.stderr)
@@ -565,13 +574,17 @@ Set ADS_IMAGE_PROVIDER to switch providers: gemini (default), openai, stability,
         print(f"Error: {_sanitize_error(e)}", file=sys.stderr)
         sys.exit(1)
 
-    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, "wb") as f:
+    try:
+        resolved_output = resolve_output_path(output_path, create_parent=True)
+    except ValueError as exc:
+        print(f"Error: {_sanitize_error(exc)}", file=sys.stderr)
+        sys.exit(1)
+    with resolved_output.open("wb") as f:
         f.write(image_bytes)
 
     result = {
         "success": True,
-        "file": output_path,
+        "file": str(resolved_output),
         "provider": provider,
         "model": args.model or f"default ({provider})",
         "width": width,
@@ -584,7 +597,7 @@ Set ADS_IMAGE_PROVIDER to switch providers: gemini (default), openai, stability,
     if args.json:
         print(json.dumps(result, indent=2))
     else:
-        print(f"✓ Generated {width}×{height} image → {output_path}")
+        print(f"✓ Generated {width}×{height} image → {resolved_output}")
 
 
 if __name__ == "__main__":

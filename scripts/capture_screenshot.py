@@ -9,11 +9,16 @@ Usage:
 """
 
 import argparse
-import os
 import sys
 from urllib.parse import urlparse
 
-from url_utils import sanitize_error, validate_url
+from url_utils import (
+    create_guarded_browser_context,
+    resolve_output_path,
+    sanitize_error,
+    sanitize_url,
+    validate_url,
+)
 
 try:
     from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
@@ -43,8 +48,8 @@ def capture_screenshot(
         Dictionary with url, output, viewport, success, error
     """
     result = {
-        "url": url,
-        "output": output_path,
+        "url": sanitize_url(url),
+        "output": str(output_path),
         "viewport": viewport,
         "success": False,
         "error": None,
@@ -58,6 +63,7 @@ def capture_screenshot(
 
     try:
         url = validate_url(url)
+        output_path = resolve_output_path(output_path, create_parent=True)
     except ValueError as e:
         result["error"] = sanitize_error(e)
         return result
@@ -65,7 +71,8 @@ def capture_screenshot(
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
+            context, blocked_requests = create_guarded_browser_context(
+                browser,
                 viewport={"width": vp["width"], "height": vp["height"]},
                 device_scale_factor=2 if viewport == "mobile" else 1,
             )
@@ -75,7 +82,11 @@ def capture_screenshot(
             # against the SSRF blocklist (initial URL was already checked).
             validate_url(page.url)
             page.wait_for_timeout(1000)
-            page.screenshot(path=output_path, full_page=full_page)
+            if blocked_requests:
+                blocked = blocked_requests[0]
+                raise ValueError(f"Blocked browser request to {blocked['url']}: {blocked['error']}")
+            page.screenshot(path=str(output_path), full_page=full_page)
+            result["output"] = str(output_path)
             result["success"] = True
             browser.close()
 
@@ -98,16 +109,21 @@ def main():
 
     args = parser.parse_args()
 
-    os.makedirs(args.output, exist_ok=True)
+    try:
+        output_dir = resolve_output_path(args.output)
+        output_dir.mkdir(parents=True, exist_ok=True)
+    except ValueError as exc:
+        print(f"Error: {sanitize_error(exc)}", file=sys.stderr)
+        sys.exit(1)
 
     parsed = urlparse(args.url)
-    base_name = parsed.netloc.replace(".", "_")
+    base_name = (parsed.hostname or "landing-page").replace(".", "_")
 
     viewports = VIEWPORTS.keys() if args.all else [args.viewport]
 
     for viewport in viewports:
         filename = f"{base_name}_{viewport}.png"
-        output_path = os.path.join(args.output, filename)
+        output_path = output_dir / filename
 
         print(f"Capturing {viewport} screenshot...")
         result = capture_screenshot(

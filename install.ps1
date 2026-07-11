@@ -25,13 +25,20 @@
     .\install.ps1 -Target codex
 .EXAMPLE
     .\install.ps1 -SkillDir C:\Custom\Skills
+.NOTES
+    Prefer a host-native plugin install or a signed release archive after
+    verifying its SHA-256 checksum. Never pipe remote content to PowerShell.
 #>
 
 param(
     [ValidateSet('claude','codex','cursor','windsurf','gemini','goose')]
     [string]$Target = 'claude',
     [string]$SkillDir = '',
-    [string]$AgentDir = ''
+    [string]$AgentDir = '',
+    [ValidateSet('auto','local','git')]
+    [string]$Source = 'auto',
+    [string]$RepoDir = '',
+    [switch]$NoDeps
 )
 
 $ErrorActionPreference = "Stop"
@@ -126,7 +133,11 @@ function Main {
     }
 
     $SkillDirResolved = Join-Path $SkillBase "ads"
+    $ManifestPath = Join-Path $SkillBase ".claude-ads-$Target.manifest.json"
     $RepoUrl = "https://github.com/AI-Marketing-Hub/claude-ads"
+    $OwnedFiles = [System.Collections.Generic.List[string]]::new()
+    $OwnedDirs = [System.Collections.Generic.List[string]]::new()
+    $RecursiveDirs = [System.Collections.Generic.List[string]]::new()
 
     Write-Host "=================================="
     Write-Host "   Claude Ads - Installer"
@@ -134,79 +145,145 @@ function Main {
     Write-Host "=================================="
     Write-Host ""
 
-    # Check prerequisites
-    if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-        Write-Host "X Git is required but not installed." -ForegroundColor Red
+    # Prefer the current release/checkout when this script ships with the
+    # distribution. Standalone installers use the operator's authenticated Git.
+    $SourceDir = $null
+    if ($RepoDir) { $Source = 'local' }
+    if ($Source -eq 'auto') {
+        if ((Test-Path (Join-Path $PSScriptRoot "ads\SKILL.md")) -and (Test-Path (Join-Path $PSScriptRoot "skills"))) {
+            $Source = 'local'
+            $SourceDir = $PSScriptRoot
+        } else {
+            $Source = 'git'
+        }
+    }
+    if ($Source -eq 'local') {
+        $SourceDir = if ($RepoDir) { $RepoDir } else { $PSScriptRoot }
+        if (-not (Test-InstallPath -Path $SourceDir)) { throw "Invalid local repository path" }
+        $SourceDir = (Resolve-Path $SourceDir).Path
+        if (-not (Test-Path (Join-Path $SourceDir "ads\SKILL.md"))) {
+            throw "Local source is not a Claude Ads distribution: $SourceDir"
+        }
+    } elseif (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+        Write-Host "X Git is required for -Source git." -ForegroundColor Red
         exit 1
     }
-    Write-Host "OK Git detected" -ForegroundColor Green
+    Write-Host "OK Distribution source: $Source" -ForegroundColor Green
 
     # Create directories
     New-Item -ItemType Directory -Path (Join-Path $SkillDirResolved "references") -Force | Out-Null
     New-Item -ItemType Directory -Path $AgentDirResolved -Force | Out-Null
 
     # Clone to temp directory
-    $TempDir = Join-Path $env:TEMP "claude-ads-install-$(Get-Random)"
-    Write-Host "Downloading Claude Ads..."
+    $TempDir = $null
 
     try {
-        # Temporarily allow stderr (git writes progress to stderr — treated as error in PS 5.1)
-        $ErrorActionPreference = "Continue"
-        git clone --depth 1 $RepoUrl "$TempDir\claude-ads" 2>&1 | Out-Null
-        $ErrorActionPreference = "Stop"
-        if ($LASTEXITCODE -ne 0) { throw "Git clone failed" }
+        if ($Source -eq 'git') {
+            $TempDir = Join-Path $env:TEMP "claude-ads-install-$(Get-Random)"
+            Write-Host "Downloading Claude Ads with authenticated Git..."
+            $ErrorActionPreference = "Continue"
+            git clone --depth 1 $RepoUrl "$TempDir\claude-ads" 2>&1 | Out-Null
+            $ErrorActionPreference = "Stop"
+            if ($LASTEXITCODE -ne 0) { throw "Git clone failed" }
+            $SourceDir = "$TempDir\claude-ads"
+        }
 
         # Copy main skill + references
         Write-Host "Installing skill files..."
-        Copy-Item "$TempDir\claude-ads\ads\SKILL.md" -Destination "$SkillDirResolved\SKILL.md" -Force
-        Copy-Item "$TempDir\claude-ads\ads\references\*.md" -Destination "$SkillDirResolved\references\" -Force
+        Copy-Item "$SourceDir\ads\SKILL.md" -Destination "$SkillDirResolved\SKILL.md" -Force
+        [void]$OwnedFiles.Add((Join-Path $SkillDirResolved "SKILL.md"))
+        Get-ChildItem "$SourceDir\ads\references\*.md" -File | ForEach-Object {
+            $Destination = Join-Path "$SkillDirResolved\references" $_.Name
+            Copy-Item $_.FullName -Destination $Destination -Force
+            [void]$OwnedFiles.Add($Destination)
+        }
+        [void]$OwnedDirs.Add((Join-Path $SkillDirResolved "references"))
 
         # Copy sub-skills
         Write-Host "Installing sub-skills..."
-        Get-ChildItem "$TempDir\claude-ads\skills" -Directory | ForEach-Object {
+        Get-ChildItem "$SourceDir\skills" -Directory | ForEach-Object {
             $TargetDir = Join-Path $SkillBase $_.Name
             New-Item -ItemType Directory -Path $TargetDir -Force | Out-Null
             Copy-Item (Join-Path $_.FullName "SKILL.md") -Destination "$TargetDir\SKILL.md" -Force
+            [void]$OwnedFiles.Add((Join-Path $TargetDir "SKILL.md"))
 
             # Copy assets (industry templates) if they exist
             $AssetsDir = Join-Path $_.FullName "assets"
             if (Test-Path $AssetsDir) {
                 $TargetAssets = Join-Path $TargetDir "assets"
                 New-Item -ItemType Directory -Path $TargetAssets -Force | Out-Null
-                Copy-Item "$AssetsDir\*.md" -Destination "$TargetAssets\" -Force
+                Get-ChildItem "$AssetsDir\*.md" -File | ForEach-Object {
+                    $Destination = Join-Path $TargetAssets $_.Name
+                    Copy-Item $_.FullName -Destination $Destination -Force
+                    [void]$OwnedFiles.Add($Destination)
+                }
+                [void]$OwnedDirs.Add($TargetAssets)
             }
+            [void]$OwnedDirs.Add($TargetDir)
         }
 
         # Copy agents
         Write-Host "Installing subagents..."
-        Copy-Item "$TempDir\claude-ads\agents\*.md" -Destination "$AgentDirResolved\" -Force
+        Get-ChildItem "$SourceDir\agents\*.md" -File | ForEach-Object {
+            $Destination = Join-Path $AgentDirResolved $_.Name
+            Copy-Item $_.FullName -Destination $Destination -Force
+            [void]$OwnedFiles.Add($Destination)
+        }
 
         # Copy scripts (optional Python tools)
-        $ScriptsSource = "$TempDir\claude-ads\scripts"
+        $ScriptsSource = "$SourceDir\scripts"
         if (Test-Path $ScriptsSource) {
             Write-Host "Installing Python scripts..."
             $ScriptsDir = Join-Path $SkillDirResolved "scripts"
             New-Item -ItemType Directory -Path $ScriptsDir -Force | Out-Null
-            Copy-Item "$ScriptsSource\*.py" -Destination "$ScriptsDir\" -Force
-            Copy-Item "$TempDir\claude-ads\requirements.txt" -Destination "$SkillDirResolved\requirements.txt" -Force
+            Get-ChildItem "$ScriptsSource\*.py" -File | ForEach-Object {
+                $Destination = Join-Path $ScriptsDir $_.Name
+                Copy-Item $_.FullName -Destination $Destination -Force
+                [void]$OwnedFiles.Add($Destination)
+            }
+            Copy-Item "$SourceDir\requirements.txt" -Destination "$SkillDirResolved\requirements.txt" -Force
+            [void]$OwnedFiles.Add((Join-Path $SkillDirResolved "requirements.txt"))
+            [void]$OwnedDirs.Add($ScriptsDir)
         }
 
         Write-Host ""
-        if ($AllowPip) {
-            Write-Host "Installing Python dependencies..."
+        if ($AllowPip -and -not $NoDeps) {
+            Write-Host "Installing Python dependencies into a managed virtual environment..."
             $ErrorActionPreference = "Continue"
-            pip install -q -r "$SkillDirResolved\requirements.txt" 2>$null
-            if ($LASTEXITCODE -eq 0) {
-                Write-Host "  OK Python dependencies installed" -ForegroundColor Green
+            $Python = Get-Command python -ErrorAction SilentlyContinue
+            $VenvDir = Join-Path $SkillDirResolved ".venv"
+            if ($Python) {
+                & $Python.Source -m venv $VenvDir
+                if ($LASTEXITCODE -eq 0) {
+                    & "$VenvDir\Scripts\python.exe" -m pip install -q -r "$SkillDirResolved\requirements.txt"
+                }
+            }
+            if ($Python -and $LASTEXITCODE -eq 0) {
+                [void]$RecursiveDirs.Add($VenvDir)
+                Write-Host "  OK Python dependencies installed in $VenvDir" -ForegroundColor Green
             } else {
-                Write-Host "  Warning: pip install failed. Run manually: pip install -r $SkillDirResolved\requirements.txt" -ForegroundColor Yellow
+                Remove-Item $VenvDir -Recurse -Force -ErrorAction SilentlyContinue
+                Write-Host "  Warning: dependency install failed; create a virtual environment manually." -ForegroundColor Yellow
             }
             $ErrorActionPreference = "Stop"
+        } elseif ($NoDeps) {
+            Write-Host "i  Skipping Python dependencies (-NoDeps)." -ForegroundColor Yellow
         } else {
             Write-Host "i  Skipping Python dependencies - $HostLabel host runtime may not execute Python skills directly." -ForegroundColor Yellow
             Write-Host "   If you need PDF reports / landing-page analysis / screenshots, install manually:"
-            Write-Host "     pip install -r $SkillDirResolved\requirements.txt"
+            Write-Host "     python -m venv <env>; <env>\Scripts\python.exe -m pip install -r $SkillDirResolved\requirements.txt"
         }
+
+        [void]$OwnedDirs.Add($SkillDirResolved)
+        $Manifest = @{
+            version = 1
+            target = $Target
+            files = @($OwnedFiles)
+            directories = @($OwnedDirs)
+            recursive_directories = @($RecursiveDirs)
+        }
+        $Manifest | ConvertTo-Json -Depth 4 | Set-Content -Path $ManifestPath -Encoding UTF8
+        Write-Host "OK Ownership manifest: $ManifestPath" -ForegroundColor Green
 
         # Check for banana-claude (image generation provider)
         Write-Host ""
@@ -243,7 +320,7 @@ function Main {
     }
     finally {
         # Cleanup temp directory
-        if (Test-Path $TempDir) {
+        if ($TempDir -and (Test-Path $TempDir)) {
             Remove-Item -Path $TempDir -Recurse -Force -ErrorAction SilentlyContinue
         }
     }

@@ -25,6 +25,9 @@ import subprocess
 import sys
 import tempfile
 from datetime import datetime
+from pathlib import Path
+
+from url_utils import resolve_output_path, sanitize_error
 
 # Version stamp shown in PDF header/footer. Keep in sync with
 # .claude-plugin/plugin.json `version`.
@@ -489,6 +492,7 @@ def _add_page_footer(canvas, doc):
 
 def build_pdf(data: dict, output_path: str, brand_name: str = ""):
     """Build the complete professional PDF report."""
+    output_path = str(resolve_output_path(output_path, create_parent=True))
     doc = SimpleDocTemplate(
         output_path, pagesize=letter,
         rightMargin=0.75 * inch, leftMargin=0.75 * inch,
@@ -736,8 +740,12 @@ def main():
         print(json.dumps(data, indent=2, default=str))
         return
 
-    output_path = args.output or args.input.rsplit(".", 1)[0] + "-report.pdf"
-    build_pdf(data, output_path, args.brand)
+    output_path = args.output or f"{Path(args.input).stem}-report.pdf"
+    try:
+        output_path = build_pdf(data, output_path, args.brand)
+    except ValueError as exc:
+        print(f"Error: {sanitize_error(exc)}", file=sys.stderr)
+        sys.exit(1)
     print(f"PDF report generated: {output_path}")
 
     # Auto-run content check post-build

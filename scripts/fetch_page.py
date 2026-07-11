@@ -11,7 +11,14 @@ import argparse
 import sys
 from urllib.parse import urljoin
 
-from url_utils import sanitize_error, sanitize_url, validate_url
+from url_utils import (
+    guarded_request,
+    resolve_output_path,
+    sanitize_error,
+    sanitize_headers,
+    sanitize_url,
+    validate_url,
+)
 
 try:
     import requests
@@ -42,7 +49,7 @@ def fetch_page(
         Dictionary with url, status_code, content, headers, redirect_chain, error
     """
     result = {
-        "url": url,
+        "url": sanitize_url(url),
         "status_code": None,
         "content": None,
         "headers": {},
@@ -58,6 +65,9 @@ def fetch_page(
 
     try:
         session = requests.Session()
+        # Ignore ambient HTTP(S)_PROXY settings. They can route validated
+        # public URLs through an unexpected internal proxy and leak headers.
+        session.trust_env = False
         current_url = url
         redirect_chain = []
 
@@ -67,11 +77,15 @@ def fetch_page(
         # blocklist. A public origin returning a 302 to e.g. 169.254.169.254
         # would have reached cloud metadata.
         for _ in range(max_redirects + 1):
-            response = session.get(
+            # Validate immediately before every network dispatch, not only at
+            # input parsing time. Redirect targets are validated both when
+            # parsed and here at the pre-request boundary.
+            response = guarded_request(
+                session,
+                "GET",
                 current_url,
                 headers=DEFAULT_HEADERS,
                 timeout=timeout,
-                allow_redirects=False,
             )
 
             if not follow_redirects or response.status_code not in (301, 302, 303, 307, 308):
@@ -94,11 +108,11 @@ def fetch_page(
             result["error"] = f"Too many redirects (max {max_redirects})"
             return result
 
-        result["url"] = current_url
+        result["url"] = sanitize_url(current_url)
         result["status_code"] = response.status_code
         result["content"] = response.text
-        result["headers"] = dict(response.headers)
-        result["redirect_chain"] = redirect_chain
+        result["headers"] = sanitize_headers(response.headers)
+        result["redirect_chain"] = [sanitize_url(item) for item in redirect_chain]
 
     except requests.exceptions.Timeout:
         result["error"] = f"Request timed out after {timeout} seconds"
@@ -132,9 +146,14 @@ def main():
         sys.exit(1)
 
     if args.output:
-        with open(args.output, "w", encoding="utf-8") as f:
+        try:
+            output_path = resolve_output_path(args.output, create_parent=True)
+        except ValueError as exc:
+            print(f"Error: {sanitize_error(exc)}", file=sys.stderr)
+            sys.exit(1)
+        with output_path.open("w", encoding="utf-8") as f:
             f.write(result["content"])
-        print(f"Saved to {args.output}")
+        print(f"Saved to {output_path}")
     else:
         print(result["content"])
 

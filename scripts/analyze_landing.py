@@ -14,7 +14,7 @@ import argparse
 import json
 import sys
 
-from url_utils import sanitize_error, validate_url
+from url_utils import create_guarded_browser_context, sanitize_error, sanitize_url, validate_url
 
 try:
     from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
@@ -37,7 +37,7 @@ def analyze_landing(url: str, timeout: int = 30000) -> dict:
         - Trust signals (testimonials, badges, reviews)
     """
     result = {
-        "url": url,
+        "url": sanitize_url(url),
         "performance": {
             "lcp_ms": None,
             "cls": None,
@@ -87,13 +87,18 @@ def analyze_landing(url: str, timeout: int = 30000) -> dict:
             browser = p.chromium.launch(headless=True)
 
             # Desktop analysis
-            desktop = browser.new_context(viewport={"width": 1920, "height": 1080})
+            desktop, desktop_blocks = create_guarded_browser_context(
+                browser, viewport={"width": 1920, "height": 1080}
+            )
             page = desktop.new_page()
 
             page.goto(url, wait_until="networkidle", timeout=timeout)
             # Playwright follows redirects silently. Re-validate the final URL
             # against the SSRF blocklist (initial URL was already checked).
             validate_url(page.url)
+            if desktop_blocks:
+                blocked = desktop_blocks[0]
+                raise ValueError(f"Blocked browser request to {blocked['url']}: {blocked['error']}")
 
             # Performance metrics
             perf = page.evaluate("""
@@ -214,10 +219,15 @@ def analyze_landing(url: str, timeout: int = 30000) -> dict:
             desktop.close()
 
             # Mobile analysis
-            mobile = browser.new_context(viewport={"width": 375, "height": 812})
+            mobile, mobile_blocks = create_guarded_browser_context(
+                browser, viewport={"width": 375, "height": 812}
+            )
             page = mobile.new_page()
             page.goto(url, wait_until="networkidle", timeout=timeout)
             validate_url(page.url)
+            if mobile_blocks:
+                blocked = mobile_blocks[0]
+                raise ValueError(f"Blocked browser request to {blocked['url']}: {blocked['error']}")
 
             # LCP on mobile viewport (G59 = mobile speed)
             lcp = page.evaluate("""

@@ -20,7 +20,15 @@ import pytest
 SCRIPTS_DIR = Path(__file__).resolve().parent.parent.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS_DIR))
 
-from url_utils import sanitize_error, sanitize_url, validate_url  # noqa: E402
+from url_utils import (  # noqa: E402
+    guarded_request,
+    install_playwright_ssrf_guard,
+    resolve_output_path,
+    sanitize_error,
+    sanitize_headers,
+    sanitize_url,
+    validate_url,
+)
 
 
 # ─── SSRF blocklist ─────────────────────────────────────────────────────────
@@ -28,6 +36,9 @@ from url_utils import sanitize_error, sanitize_url, validate_url  # noqa: E402
 
 @pytest.mark.parametrize("url", [
     "http://127.0.0.1/admin",
+    "http://2130706433/admin",       # integer-encoded 127.0.0.1
+    "http://0x7f000001/admin",       # hexadecimal 127.0.0.1
+    "http://127.1/admin",            # shortened loopback notation
     "http://localhost/secret",         # resolves to 127.0.0.1
     "http://0.0.0.0:8080",
     "http://10.0.0.1",
@@ -36,6 +47,8 @@ from url_utils import sanitize_error, sanitize_url, validate_url  # noqa: E402
     "http://192.168.1.1",
     "http://169.254.169.254/latest/meta-data/",  # AWS metadata endpoint
     "http://100.64.0.1",                          # CGNAT range
+    "http://224.0.0.1",                           # multicast
+    "http://198.18.0.1",                          # benchmark network
     "https://[::1]/admin",
     "https://[fc00::1]",                          # ULA
     "https://[fe80::1%25eth0]",                   # link-local (note %% for URL)
@@ -58,6 +71,17 @@ def test_blocks_private_and_internal_addresses(url):
     "javascript:alert(1)",
 ])
 def test_blocks_non_http_schemes(url):
+    with pytest.raises(ValueError):
+        validate_url(url)
+
+
+@pytest.mark.parametrize("url", [
+    "https://user:password@example.com/path",
+    "https://example.com\\@127.0.0.1/",
+    "https://example.com:invalid/path",
+    "https://example.com/\nHost: 127.0.0.1",
+])
+def test_blocks_parser_differentials_and_url_credentials(url):
     with pytest.raises(ValueError):
         validate_url(url)
 
@@ -154,6 +178,103 @@ def test_sanitize_url_preserves_benign_url():
     """Plain URLs without credentials should pass through unchanged."""
     url = "https://example.com/landing?utm_source=meta&utm_campaign=brand"
     assert sanitize_url(url) == url
+
+
+def test_sanitize_headers_removes_cookie_and_embedded_token():
+    cleaned = sanitize_headers({
+        "Set-Cookie": "session=top-secret",
+        "Location": "https://example.com/cb?access_token=ya29.AHESpeudo",
+        "Content-Type": "text/html",
+    })
+    assert cleaned["Set-Cookie"] == "***"
+    assert "ya29.AHESpeudo" not in cleaned["Location"]
+    assert cleaned["Content-Type"] == "text/html"
+
+
+def test_sanitize_error_removes_private_key_block():
+    private_key = "-----BEGIN PRIVATE KEY-----\nabc123\n-----END PRIVATE KEY-----"
+    assert "abc123" not in sanitize_error(RuntimeError(private_key))
+
+
+# ─── Pre-request and output guards ─────────────────────────────────────────
+
+
+def test_guarded_request_refuses_automatic_redirects(monkeypatch):
+    monkeypatch.setattr(
+        "url_utils.socket.getaddrinfo",
+        lambda *args, **kwargs: [(2, 1, 6, "", ("93.184.216.34", 0))],
+    )
+
+    class Session:
+        def get(self, *args, **kwargs):  # pragma: no cover - must not dispatch
+            raise AssertionError("network dispatch should not happen")
+
+    with pytest.raises(ValueError, match="Automatic redirects"):
+        guarded_request(Session(), "GET", "https://example.com", allow_redirects=True)
+
+
+def test_output_path_is_contained_and_blocks_symlink_escape(tmp_path):
+    root = tmp_path / "outputs"
+    root.mkdir()
+    assert resolve_output_path("reports/a.pdf", root=root) == root / "reports" / "a.pdf"
+    with pytest.raises(ValueError, match="escapes configured root"):
+        resolve_output_path("../outside.txt", root=root)
+
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (root / "linked").symlink_to(outside, target_is_directory=True)
+    with pytest.raises(ValueError, match="escapes configured root"):
+        resolve_output_path("linked/leak.txt", root=root)
+
+
+def test_playwright_guard_blocks_private_requests_before_dispatch(monkeypatch):
+    handlers = []
+
+    class Context:
+        def route(self, pattern, handler):
+            assert pattern == "**/*"
+            handlers.append(handler)
+
+    blocked = install_playwright_ssrf_guard(Context())
+
+    class Request:
+        url = "http://169.254.169.254/latest/meta-data/"
+
+    class Route:
+        def __init__(self):
+            self.aborted = False
+            self.continued = False
+
+        def abort(self, reason):
+            assert reason == "blockedbyclient"
+            self.aborted = True
+
+        def continue_(self):
+            self.continued = True
+
+    route = Route()
+    handlers[0](route, Request())
+    assert route.aborted is True
+    assert route.continued is False
+    assert blocked and "non-public IP" in blocked[0]["error"]
+
+
+def test_guarded_browser_context_disables_service_workers_and_downloads():
+    from url_utils import create_guarded_browser_context
+
+    class Context:
+        def route(self, pattern, handler):
+            self.pattern = pattern
+
+    class Browser:
+        def new_context(self, **kwargs):
+            self.kwargs = kwargs
+            return Context()
+
+    browser = Browser()
+    create_guarded_browser_context(browser, viewport={"width": 100, "height": 100})
+    assert browser.kwargs["service_workers"] == "block"
+    assert browser.kwargs["accept_downloads"] is False
 
 
 # ─── Redirect SSRF revalidation (v1.7.1 hardening) ──────────────────────────

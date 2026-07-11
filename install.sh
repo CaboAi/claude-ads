@@ -18,12 +18,14 @@ set -euo pipefail
 #   bash install.sh --target=gemini
 #   bash install.sh --target=goose
 #   bash install.sh --skill-dir=/custom/path     # override the target's default path
+#   bash install.sh --source=local --no-deps     # install this checkout, skip Python deps
 #
 # All target keys are validated against a strict whitelist (no shell injection
 # possible via --target=...). Custom --skill-dir paths are validated against
 # `;&|$()<>` ` `, leading dashes, `..` segments, and UNC-style paths.
 
 REPO_URL="https://github.com/AI-Marketing-Hub/claude-ads"
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Target whitelist + path mapping
@@ -100,6 +102,8 @@ validate_install_path() {
     case "$path" in *..*) return 1 ;; esac
     # Reject UNC-style paths (Windows-ish input slipping through bash)
     case "$path" in //*|\\\\*) return 1 ;; esac
+    # Manifest records are tab/newline delimited.
+    case "$path" in *$'\n'*|*$'\r'*|*$'\t'*) return 1 ;; esac
     return 0
 }
 
@@ -109,6 +113,7 @@ Claude Ads Installer
 
 Usage:
   bash install.sh [--target=<host>] [--skill-dir=<path>] [--agent-dir=<path>]
+                  [--source=<auto|local|git>] [--repo-dir=<path>] [--no-deps]
 
 Targets (default: claude):
   claude     Claude Code (verified)
@@ -121,11 +126,19 @@ Targets (default: claude):
 Overrides:
   --skill-dir=<path>   Override the target's default skill install root
   --agent-dir=<path>   Override the target's default agent install root
+  --source=<mode>      auto uses this checkout when available, otherwise authenticated Git
+  --repo-dir=<path>    Local checkout to install (implies --source=local)
+  --no-deps            Do not create the managed Python virtual environment
 
 Examples:
   bash install.sh
   bash install.sh --target=codex
+  bash install.sh --source=local --no-deps
   bash install.sh --target=claude --skill-dir=~/custom/skills
+
+Security:
+  Prefer a host-native plugin install or a signed release archive with a
+  verified SHA-256 checksum. Never pipe a remote installer directly to a shell.
 
 EOF
 }
@@ -135,6 +148,9 @@ main() {
     local TARGET="claude"
     local SKILL_DIR_OVERRIDE=""
     local AGENT_DIR_OVERRIDE=""
+    local SOURCE_MODE="auto"
+    local REPO_DIR=""
+    local INSTALL_DEPS=1
 
     # Parse args
     while [ $# -gt 0 ]; do
@@ -162,6 +178,27 @@ main() {
                 shift
                 [ $# -eq 0 ] && { echo "✗ --agent-dir requires a value" >&2; exit 1; }
                 AGENT_DIR_OVERRIDE="$1"
+                ;;
+            --source=*)
+                SOURCE_MODE="${1#*=}"
+                ;;
+            --source)
+                shift
+                [ $# -eq 0 ] && { echo "✗ --source requires a value" >&2; exit 1; }
+                SOURCE_MODE="$1"
+                ;;
+            --repo-dir=*)
+                REPO_DIR="${1#*=}"
+                SOURCE_MODE="local"
+                ;;
+            --repo-dir)
+                shift
+                [ $# -eq 0 ] && { echo "✗ --repo-dir requires a value" >&2; exit 1; }
+                REPO_DIR="$1"
+                SOURCE_MODE="local"
+                ;;
+            --no-deps)
+                INSTALL_DEPS=0
                 ;;
             --help|-h)
                 print_help
@@ -201,6 +238,45 @@ main() {
     fi
 
     local SKILL_DIR="${SKILL_BASE}/ads"
+    local MANIFEST_PATH="${SKILL_BASE}/.claude-ads-${TARGET}.manifest"
+    local SOURCE_DIR=""
+    local TEMP_DIR=""
+    local MANIFEST_TMP=""
+    trap 'rm -rf "${TEMP_DIR:-}" "${MANIFEST_TMP:-}"' EXIT
+
+    case "$SOURCE_MODE" in
+        auto)
+            if [ -f "${SCRIPT_DIR}/ads/SKILL.md" ] && [ -d "${SCRIPT_DIR}/skills" ]; then
+                SOURCE_MODE="local"
+                SOURCE_DIR="${SCRIPT_DIR}"
+            else
+                SOURCE_MODE="git"
+            fi
+            ;;
+        local)
+            SOURCE_DIR="${REPO_DIR:-${SCRIPT_DIR}}"
+            ;;
+        git) ;;
+        *)
+            echo "✗ Invalid --source: ${SOURCE_MODE}. Use auto, local, or git." >&2
+            exit 1
+            ;;
+    esac
+
+    if [ "$SOURCE_MODE" = "local" ]; then
+        validate_install_path "$SOURCE_DIR" || {
+            echo "✗ Invalid local repository path" >&2
+            exit 1
+        }
+        SOURCE_DIR=$(CDPATH= cd -- "$SOURCE_DIR" 2>/dev/null && pwd) || {
+            echo "✗ Local repository does not exist: ${REPO_DIR:-${SCRIPT_DIR}}" >&2
+            exit 1
+        }
+        [ -f "${SOURCE_DIR}/ads/SKILL.md" ] && [ -d "${SOURCE_DIR}/skills" ] || {
+            echo "✗ Local source is not a Claude Ads distribution: ${SOURCE_DIR}" >&2
+            exit 1
+        }
+    fi
 
     echo "════════════════════════════════════════"
     echo "║   Claude Ads - Installer             ║"
@@ -208,74 +284,104 @@ main() {
     echo "════════════════════════════════════════"
     echo ""
 
-    # Check prerequisites
-    command -v git >/dev/null 2>&1 || { echo "✗ Git is required but not installed."; exit 1; }
-    echo "✓ Git detected"
+    # Resolve distribution source. Private Git installs use the operator's
+    # existing credential helper/SSH setup; credentials are never accepted as
+    # command arguments or embedded into the URL.
+    if [ "$SOURCE_MODE" = "git" ]; then
+        command -v git >/dev/null 2>&1 || { echo "✗ Git is required for --source=git."; exit 1; }
+        TEMP_DIR=$(mktemp -d)
+        echo "↓ Downloading Claude Ads with authenticated Git..."
+        git clone --depth 1 "${REPO_URL}" "${TEMP_DIR}/claude-ads"
+        SOURCE_DIR="${TEMP_DIR}/claude-ads"
+    fi
+    echo "✓ Distribution source: ${SOURCE_MODE}"
 
-    # Create directories
-    mkdir -p "${SKILL_DIR}/references"
-    mkdir -p "${AGENT_DIR}"
+    mkdir -p "${SKILL_DIR}/references" "${AGENT_DIR}"
+    MANIFEST_TMP=$(mktemp "${SKILL_BASE}/.claude-ads-manifest.XXXXXX")
+    printf 'V\t1\nT\t%s\n' "$TARGET" > "$MANIFEST_TMP"
 
-    # Clone or update
-    TEMP_DIR=$(mktemp -d)
-    trap 'rm -rf "${TEMP_DIR}"' EXIT
-
-    echo "↓ Downloading Claude Ads..."
-    git clone --depth 1 "${REPO_URL}" "${TEMP_DIR}/claude-ads" 2>/dev/null
+    record_file() { printf 'F\t%s\n' "$1" >> "$MANIFEST_TMP"; }
+    record_dir() { printf 'D\t%s\n' "$1" >> "$MANIFEST_TMP"; }
+    install_file() {
+        local source="$1" destination="$2"
+        mkdir -p "$(dirname -- "$destination")"
+        cp "$source" "$destination"
+        record_file "$destination"
+    }
 
     # Copy main skill + references
     echo "→ Installing skill files..."
-    cp "${TEMP_DIR}/claude-ads/ads/SKILL.md" "${SKILL_DIR}/SKILL.md"
-    cp "${TEMP_DIR}/claude-ads/ads/references/"*.md "${SKILL_DIR}/references/"
+    install_file "${SOURCE_DIR}/ads/SKILL.md" "${SKILL_DIR}/SKILL.md"
+    for source_file in "${SOURCE_DIR}/ads/references/"*.md; do
+        [ -f "$source_file" ] || continue
+        install_file "$source_file" "${SKILL_DIR}/references/$(basename -- "$source_file")"
+    done
+    record_dir "${SKILL_DIR}/references"
 
     # Copy sub-skills
     echo "→ Installing sub-skills..."
-    for skill_dir in "${TEMP_DIR}/claude-ads/skills"/*/; do
+    for skill_dir in "${SOURCE_DIR}/skills"/*/; do
         skill_name=$(basename "${skill_dir}")
         target="${SKILL_BASE}/${skill_name}"
         mkdir -p "${target}"
-        cp "${skill_dir}SKILL.md" "${target}/SKILL.md"
+        install_file "${skill_dir}SKILL.md" "${target}/SKILL.md"
 
         # Copy assets (industry templates) if they exist
         if [ -d "${skill_dir}assets" ]; then
             mkdir -p "${target}/assets"
-            cp "${skill_dir}assets/"*.md "${target}/assets/"
+            for source_file in "${skill_dir}assets/"*.md; do
+                [ -f "$source_file" ] || continue
+                install_file "$source_file" "${target}/assets/$(basename -- "$source_file")"
+            done
+            record_dir "${target}/assets"
         fi
+        record_dir "$target"
     done
 
     # Copy agents
     echo "→ Installing subagents..."
-    cp "${TEMP_DIR}/claude-ads/agents/"*.md "${AGENT_DIR}/" 2>/dev/null || true
+    for source_file in "${SOURCE_DIR}/agents/"*.md; do
+        [ -f "$source_file" ] || continue
+        install_file "$source_file" "${AGENT_DIR}/$(basename -- "$source_file")"
+    done
 
     # Copy scripts (optional Python tools)
     SCRIPTS_DIR="${SKILL_DIR}/scripts"
-    if [ -d "${TEMP_DIR}/claude-ads/scripts" ]; then
+    if [ -d "${SOURCE_DIR}/scripts" ]; then
         echo "→ Installing Python scripts..."
         mkdir -p "${SCRIPTS_DIR}"
-        cp "${TEMP_DIR}/claude-ads/scripts/"*.py "${SCRIPTS_DIR}/"
-        cp "${TEMP_DIR}/claude-ads/requirements.txt" "${SKILL_DIR}/requirements.txt"
+        for source_file in "${SOURCE_DIR}/scripts/"*.py; do
+            [ -f "$source_file" ] || continue
+            install_file "$source_file" "${SCRIPTS_DIR}/$(basename -- "$source_file")"
+        done
+        install_file "${SOURCE_DIR}/requirements.txt" "${SKILL_DIR}/requirements.txt"
+        record_dir "${SCRIPTS_DIR}"
     fi
 
     # Install Python dependencies — only for hosts that explicitly support
     # Python execution (claude, codex). Other targets skip the pip step.
     echo ""
-    if [ "${ALLOW_PIP}" = "1" ]; then
-        echo "→ Installing Python dependencies..."
-        if command -v pip3 >/dev/null 2>&1 || command -v pip >/dev/null 2>&1; then
-            PIP_CMD="pip3"
-            command -v pip3 >/dev/null 2>&1 || PIP_CMD="pip"
-            ${PIP_CMD} install -q -r "${SKILL_DIR}/requirements.txt" 2>/dev/null \
-                || { echo "  ⚠ Standard pip install failed, trying --break-system-packages..." >&2; \
-                     ${PIP_CMD} install --break-system-packages -q -r "${SKILL_DIR}/requirements.txt" 2>/dev/null; } \
-                && echo "  ✓ Python dependencies installed" \
-                || echo "  ⚠ pip install failed. Run manually: pip3 install -r ${SKILL_DIR}/requirements.txt"
+    if [ "${ALLOW_PIP}" = "1" ] && [ "$INSTALL_DEPS" = "1" ]; then
+        echo "→ Installing Python dependencies into a managed virtual environment..."
+        if command -v python3 >/dev/null 2>&1; then
+            VENV_DIR="${SKILL_DIR}/.venv"
+            if python3 -m venv "${VENV_DIR}" \
+                && "${VENV_DIR}/bin/python" -m pip install -q -r "${SKILL_DIR}/requirements.txt"; then
+                printf 'R\t%s\n' "$VENV_DIR" >> "$MANIFEST_TMP"
+                echo "  ✓ Python dependencies installed in ${VENV_DIR}"
+            else
+                rm -rf "$VENV_DIR"
+                echo "  ⚠ Dependency install failed. Create a virtual environment and install ${SKILL_DIR}/requirements.txt manually." >&2
+            fi
         else
-            echo "  ⚠ pip not found. Install deps manually: pip3 install -r ${SKILL_DIR}/requirements.txt"
+            echo "  ⚠ python3 not found. Python helper dependencies were not installed."
         fi
+    elif [ "$INSTALL_DEPS" = "0" ]; then
+        echo "ℹ Skipping Python dependencies (--no-deps)."
     else
         echo "ℹ Skipping Python dependencies — ${HOST_LABEL} host runtime may not execute Python skills directly."
         echo "  If you need PDF reports / landing-page analysis / screenshots, install manually:"
-        echo "    pip3 install -r ${SKILL_DIR}/requirements.txt"
+        echo "    python -m venv <env> && <env>/bin/python -m pip install -r ${SKILL_DIR}/requirements.txt"
     fi
 
     # Check for banana-claude (image generation provider)
@@ -284,9 +390,15 @@ main() {
         echo "  ✓ banana-claude detected (image generation ready)"
     else
         echo "  ⚠ banana-claude not installed. Image generation (/ads generate, /ads photoshoot) requires it."
-        echo "    Install: curl -fsSL https://raw.githubusercontent.com/AgriciDaniel/banana-claude/main/install.sh | bash"
+        echo "    Install through your host marketplace, or clone a tagged release and verify its checksum:"
+        echo "    https://github.com/AgriciDaniel/banana-claude"
         echo "    Then run: /banana setup (to configure API key)"
     fi
+
+    record_dir "${SKILL_DIR}"
+    mv -f "$MANIFEST_TMP" "$MANIFEST_PATH"
+    MANIFEST_TMP=""
+    echo "✓ Ownership manifest: ${MANIFEST_PATH}"
 
     echo ""
     echo "✓ Claude Ads installed successfully for ${HOST_LABEL}!"
