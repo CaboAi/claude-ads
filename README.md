@@ -32,17 +32,10 @@ operation pass approval, idempotency, verification, audit, and rollback gates.
   <img src="assets/diagrams/platform-coverage.svg" alt="Twelve first-class paid-advertising platform surfaces" width="100%">
 </p>
 
-| Search, video, and social | Commerce and retail media |
+| Segment | Platforms |
 | --- | --- |
-| Google Ads | Apple Ads |
-| Meta Ads | Amazon Ads |
-| YouTube Ads | Pinterest Ads |
-| LinkedIn Ads |  |
-| TikTok Ads |  |
-| Microsoft Advertising |  |
-| Reddit Ads |  |
-| Snapchat Ads |  |
-| X Ads |  |
+| Search, video, and social | Google Ads, Meta Ads, YouTube Ads, LinkedIn Ads, TikTok Ads, Microsoft Advertising, Reddit Ads, Snapchat Ads, X Ads |
+| Commerce and retail media | Apple Ads, Amazon Ads, Pinterest Ads |
 
 Each platform has a focused skill, audit worker, control reference, capability
 declaration, and testable routing surface. The
@@ -225,12 +218,12 @@ evals/                routing and behavioral evaluation cases
 tests/                deterministic, security, installer, and adapter tests
 ```
 
-## Privacy and publication
+## Privacy
 
-The canonical repository remains private until the owner approves a separate
-public-release gate. Client data, raw private research, captured prompts,
-credentials, account exports, and agent transcripts must never enter Git history
-or release archives.
+Client data, raw private research, captured prompts, credentials, account
+exports, and agent transcripts must never enter Git history, reports, or release
+archives. Keep credentials in environment variables, an OS keychain, or an
+approved secret manager.
 
 ## License
 
